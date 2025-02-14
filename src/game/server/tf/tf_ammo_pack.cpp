@@ -69,11 +69,6 @@ CTFAmmoPack *CTFAmmoPack::Create( const Vector &vecOrigin, const QAngle &vecAngl
 	{
 		pAmmoPack->SetModelName( AllocPooledString( pszModelName ) );
 		DispatchSpawn( pAmmoPack );
-		CTFPlayer* pTFPlayer = ToTFPlayer( pOwner );
-		if( pTFPlayer )
-		{
-			pAmmoPack->SetHealthInstead( pTFPlayer->Weapon_OwnsThisID( TF_WEAPON_LUNCHBOX ) && pTFPlayer->IsPlayerClass( TF_CLASS_HEAVYWEAPONS ) );
-		}
 	}
 
 	return pAmmoPack;

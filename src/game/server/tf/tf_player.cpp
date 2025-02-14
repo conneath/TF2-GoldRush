@@ -3780,6 +3780,8 @@ void CTFPlayer::DropAmmoPack( void )
 		pAmmoPack->GiveAmmo( iSecondary, TF_AMMO_SECONDARY );
 		pAmmoPack->GiveAmmo( iMetal, TF_AMMO_METAL );
 
+		pAmmoPack->SetHealthInstead( pWeapon->GetWeaponID() == TF_WEAPON_LUNCHBOX && IsPlayerClass( TF_CLASS_HEAVYWEAPONS ) );
+
 		Vector vecRight, vecUp;
 		AngleVectors( EyeAngles(), NULL, &vecRight, &vecUp );
 
