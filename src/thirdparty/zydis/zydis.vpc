@@ -1,0 +1,36 @@
+//-----------------------------------------------------------------------------
+// Zydis
+//-----------------------------------------------------------------------------
+
+$Macro SRCDIR		"..\.."
+$Macro OUTLIBDIR	"$LIBCOMMON"
+
+$Conditional THIRDPARTYPROJECT "true"
+
+$include "$SRCDIR\vpc_scripts\source_lib_base.vpc"
+
+$Configuration
+{
+	$Compiler
+	{
+		$NinjaExtraCFlags "$BASE -fpermissive -x none -std=c99" 
+		$NinjaExtraCXXFlags "$BASE -fpermissive -x none -std=c99" // i tried. screw vpc
+
+		// Current folder because of bracket includes.
+		$AdditionalIncludeDirectories		"$BASE,.\"
+	}
+}
+
+$Project "zydis"
+{
+	$Folder	"Header Files"
+	{
+		$File "Zydis.h"
+	}
+
+	$Folder	"Source Files"
+	{
+		$File "Zydis.c"
+	}
+}
+
