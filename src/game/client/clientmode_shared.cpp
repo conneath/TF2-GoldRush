@@ -67,6 +67,8 @@ extern ConVar replay_rendersetting_renderglow;
 #include "c_tf_team.h"
 #endif
 
+#include <enginedetours_client.hpp>
+
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
 
@@ -340,6 +342,8 @@ void	ClientModeShared::ComputeVguiResConditions( KeyValues *pkvConditions )
 //-----------------------------------------------------------------------------
 void ClientModeShared::Init()
 {
+	ActivateClientEngineDetours();
+
 	m_pChatElement = ( CBaseHudChat * )GET_HUDELEMENT( CHudChat );
 	Assert( m_pChatElement );
 
