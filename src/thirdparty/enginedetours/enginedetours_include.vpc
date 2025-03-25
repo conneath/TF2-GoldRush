@@ -1,0 +1,30 @@
+//-----------------------------------------------------------------------------
+//	enginedetours_include.vpc
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+//$MacroRequired "PLATFORM"
+
+$Configuration
+{
+	$General
+	{
+		//$AdditionalProjectDependencies		"enginedetours" // Broken??
+	}
+
+	$Compiler
+	{
+		$AdditionalIncludeDirectories		"$BASE,$SRCDIR/thirdparty/enginedetours/public"
+	}
+}
+
+$Project
+{
+	$Folder "Link Libraries"
+	{
+		$Lib	"$LIBCOMMON/enginedetours"
+		$Lib	"$LIBCOMMON/safetyhook"
+		$Lib	"$LIBCOMMON/zydis"
+	}
+}

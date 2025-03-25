@@ -1,0 +1,46 @@
+//-----------------------------------------------------------------------------
+// safetyhook
+//-----------------------------------------------------------------------------
+
+$Macro SRCDIR		"..\.."
+$Macro OUTLIBDIR	"$LIBCOMMON"
+
+$Conditional THIRDPARTYPROJECT "true"
+
+$include "$SRCDIR\vpc_scripts\source_lib_base.vpc"
+
+$Configuration
+{
+	$General
+	{
+		$AdditionalProjectDependencies "zydis"
+	}
+
+	$Compiler
+	{
+        $NinjaExtraCXXFlags "$BASE -fpermissive -std=c++20" // screw your c++11
+
+		// The reason for specifying .\ is because of <expected.hpp> bracket includes, I'm not editing them manually.
+		$AdditionalIncludeDirectories		"$BASE,.\,..\zydis"
+	}
+}
+
+$Project "safetyhook"
+{
+	$Folder	"Header Files"
+	{
+		$File "safetyhook.hpp"
+		$File "expected.hpp"
+	}
+
+	$Folder	"Source Files"
+	{
+		$File "safetyhook.cpp"
+	}
+
+    $Folder "Link Libraries"
+	{
+		$Lib zydis
+	}
+}
+
