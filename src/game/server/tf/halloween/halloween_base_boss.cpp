@@ -185,9 +185,6 @@ void CHalloweenBaseBoss::Event_Killed( const CTakeDamageInfo &info )
 				pEvent->SetInt( "killer", attackerVector[i].m_attacker->GetUserID() );
 				gameeventmanager->FireEvent( pEvent, true );
 			}
-
-			// Shoot a huge soul at players that have damaged the boss
-			TFGameRules()->DropHalloweenSoulPack( 25, EyePosition(), attackerVector[i].m_attacker, TEAM_SPECTATOR );
 		}
 	}
 

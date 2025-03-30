@@ -684,13 +684,6 @@ void CTeamControlPoint::InternalSetOwner( int iCapTeam, bool bMakeSound, int iNu
 		{
 			SendCapString( m_iTeam, iNumCappers, pCappingPlayers );
 		}
-
-#ifdef TF_DLL
-		if ( TFGameRules() && TFGameRules()->IsHolidayActive( kHoliday_Halloween ) )
-		{
-			TFGameRules()->DropHalloweenSoulPackToTeam( 5, GetAbsOrigin(), m_iTeam, TEAM_SPECTATOR );
-		}
-#endif
 	}
 
 	// Have control point master check the win conditions now!

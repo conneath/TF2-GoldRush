@@ -104,7 +104,6 @@
 	#include "player_vs_environment/tf_upgrades.h"
 
 	#include "tf_wheel_of_doom.h"
-	#include "tf_halloween_souls_pickup.h"
 	#include "halloween/zombie/zombie.h"
 	#include "teamplay_round_timer.h"
 	#include "halloween/spell/tf_spell_pickup.h"
@@ -118,7 +117,6 @@
 	#include "workshop/maps_workshop.h"
 	#include "tf_passtime_logic.h"
 	#include "cdll_int.h"
-	#include "halloween/halloween_gift_spawn_locations.h"
 	#include "tf_weapon_invis.h"
 	#include "tf_gc_server.h"
 	#include "gcsdk/msgprotobuf.h"
@@ -707,9 +705,6 @@ ConVar tf_mm_next_map_vote_time( "tf_mm_next_map_vote_time", "30", FCVAR_REPLICA
 
 
 static float g_fEternaweenAutodisableTime = 0.0f;
-
-ConVar tf_spec_xray( "tf_spec_xray", "1", FCVAR_NOTIFY | FCVAR_REPLICATED, "Allows spectators to see player glows. 1 = same team, 2 = both teams" );
-ConVar tf_spawn_glows_duration( "tf_spawn_glows_duration", "10", FCVAR_NOTIFY | FCVAR_REPLICATED, "How long should teammates glow after respawning\n" );
 
 #ifdef GAME_DLL
 void cc_tf_forced_holiday_changed( IConVar *pConVar, const char *pOldString, float flOldValue )
@@ -3437,23 +3432,6 @@ void CTFGameRules::LevelInitPostEntity( void )
 	// Refind our proxy, because we might have had it deleted due to a mapmaker placed one
 	m_hGamerulesProxy = dynamic_cast<CTFGameRulesProxy*>( gEntList.FindEntityByClassname( NULL, "tf_gamerules" ) );
 
-	// Halloween
-	// Flush Halloween Gift Location and grab locations if applicable.  NonHalloween maps will have these as zero
-	m_halloweenGiftSpawnLocations.Purge();
-
-	if ( IsHolidayActive( kHoliday_Halloween ) )
-	{
-		for ( int i=0; i<IHalloweenGiftSpawnAutoList::AutoList().Count(); ++i )
-		{
-			CHalloweenGiftSpawnLocation* pGift = static_cast< CHalloweenGiftSpawnLocation* >( IHalloweenGiftSpawnAutoList::AutoList()[i] );
-			m_halloweenGiftSpawnLocations.AddToTail( pGift->GetAbsOrigin() );
-			UTIL_Remove( pGift );
-		}
-
-		// Ask Halloween System if there are any locations
-		AddHalloweenGiftPositionsForMap( STRING(gpGlobals->mapname), m_halloweenGiftSpawnLocations );
-	}
-
 	m_flMatchSummaryTeleportTime = -1.f;
 
 
@@ -5764,7 +5742,6 @@ bool CTFGameRules::ApplyOnDamageModifyRules( CTakeDamageInfo &info, CBaseEntity 
 
 			if ( pVictim->m_Shared.InCond( TF_COND_URINE ) ||
 				 pVictim->m_Shared.InCond( TF_COND_MAD_MILK ) ||
-				 pVictim->m_Shared.InCond( TF_COND_GAS ) ||
 			   ( pVictim->GetWaterLevel() > WL_NotInWater ) ||
 			   ( ( flWaterExitTime > 0 ) && ( gpGlobals->curtime - flWaterExitTime < 5.0f ) ) ) // or they exited the water in the last few seconds
 			{
@@ -5974,10 +5951,6 @@ bool CTFGameRules::ApplyOnDamageModifyRules( CTakeDamageInfo &info, CBaseEntity 
 					flDamage = Max( flDamage, info.GetMaxDamage() ); // Double donk victims score max damage
 					EconEntity_OnOwnerKillEaterEvent( pGrenadeLauncher, pTFAttacker, pVictim, kKillEaterEvent_DoubleDonks );
 				}
-			}
-			else if ( pTFAttacker && pWeapon && pWeapon->GetWeaponID() == TF_WEAPON_FLAME_BALL && info.GetDamageCustom() == TF_DMG_CUSTOM_DRAGONS_FURY_BONUS_BURNING )
-			{
-				eBonusEffect = kBonusEffect_DragonsFury;
 			}
 			else if ( pTFAttacker && pTFAttacker->IsPlayerClass( TF_CLASS_SCOUT ) && !( pTFAttacker->GetFlags() & FL_ONGROUND ) )
 			{
@@ -8074,7 +8047,6 @@ void CTFGameRules::Think()
 		m_flNextFlagAlert = gpGlobals->curtime + 5.0f;
 	}
 
-	PeriodicHalloweenUpdate();
 	SpawnHalloweenBoss();
 
 	if ( IsHalloweenScenario( HALLOWEEN_SCENARIO_HIGHTOWER ) )
@@ -8207,49 +8179,6 @@ void CTFGameRules::Think()
 
 	BaseClass::Think();
 }
-
-#ifdef GAME_DLL
-
-void CTFGameRules::PeriodicHalloweenUpdate()
-{
-	// DEBUG
-
-	// Are we on a Halloween Map?
-	// Do we have Halloween Contracts?
-	if ( !IsHolidayActive( kHoliday_Halloween ) )
-		return;
-	
-	// Loop through each player that has a quest and spawn them a gift
-	if ( m_halloweenGiftSpawnLocations.Count() == 0 )
-		return;
-	
-	// If we've never given out gifts before, set the time
-	if ( m_flNextHalloweenGiftUpdateTime < 0 )
-	{
-		m_flNextHalloweenGiftUpdateTime = gpGlobals->curtime + RandomInt( 7, 12 ) * 60;
-		return;
-	}
-
-	if ( m_flNextHalloweenGiftUpdateTime > gpGlobals->curtime )
-		return;
-
-	m_flNextHalloweenGiftUpdateTime = gpGlobals->curtime + RandomInt( 7, 12 ) * 60;
-
-	CUtlVector< CTFPlayer* > playerVector;
-	CollectPlayers( &playerVector );
-	FOR_EACH_VEC( playerVector, i )
-	{
-		Vector vLocation = m_halloweenGiftSpawnLocations.Element( RandomInt( 0, m_halloweenGiftSpawnLocations.Count() - 1 ) );
-		CHalloweenGiftPickup *pGift = assert_cast<CHalloweenGiftPickup*>( CBaseEntity::CreateNoSpawn( "tf_halloween_gift_pickup", vLocation, vec3_angle, NULL ) );
-		if ( pGift )
-		{
-			pGift->SetTargetPlayer( playerVector[i] );
-			DispatchSpawn( pGift );
-		}
-	}
-	
-}
-#endif
 
 //-----------------------------------------------------------------------------
 // Purpose: 
@@ -10460,47 +10389,6 @@ void EconEntity_NonEquippedItemKillTracking( CTFPlayer *pOwner, CTFPlayer *pVict
 }
 
 //-----------------------------------------------------------------------------
-// Purpose: Sends a soul with the specified value to every living member of the
-//			specified team, originating from vecPosition.
-//-----------------------------------------------------------------------------
-void CTFGameRules::DropHalloweenSoulPackToTeam( int nAmount, const Vector& vecPosition, int nTeamNumber, int nSourceTeam )
-{
-	for( int iPlayerIndex = 1 ; iPlayerIndex <= MAX_PLAYERS; iPlayerIndex++ )
-	{
-		CTFPlayer *pTFPlayer = ToTFPlayer( UTIL_PlayerByIndex( iPlayerIndex ) );
-		if ( !pTFPlayer || !pTFPlayer->IsConnected() )
-			continue;
-
-		if ( pTFPlayer->GetTeamNumber() != nTeamNumber || !pTFPlayer->IsAlive() || pTFPlayer->m_Shared.InCond( TF_COND_HALLOWEEN_GHOST_MODE ) )
-			continue;
-
-		DropHalloweenSoulPack( nAmount, vecPosition, pTFPlayer, nSourceTeam );
-	}
-}
-
-
-
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CTFGameRules::DropHalloweenSoulPack( int nAmount, const Vector& vecSource, CBaseEntity *pTarget, int nSourceTeam )
-{
-	QAngle angles(0,0,0);
-	CHalloweenSoulPack *pSoulsPack = assert_cast<CHalloweenSoulPack*>( CBaseEntity::CreateNoSpawn( "halloween_souls_pack", vecSource, angles, NULL ) );
-
-	if ( pSoulsPack )
-	{	
-		pSoulsPack->SetTarget( pTarget );
-		pSoulsPack->SetAmount( nAmount );
-		pSoulsPack->ChangeTeam( nSourceTeam );
-
-		DispatchSpawn( pSoulsPack );
-	}
-}
-
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 bool CTFGameRules::ShouldDropSpellPickup()
@@ -10986,27 +10874,6 @@ void CTFGameRules::PlayerKilled( CBasePlayer *pVictim, const CTakeDamageInfo &in
 			if ( ShouldDropBonusDuckFromPlayer( pTFScorer, pTFVictim ) )
 			{
 				DropBonusDuck( pTFVictim->GetAbsOrigin(), pTFScorer, pAssister, pTFVictim, ( info.GetDamageType() & DMG_CRITICAL ) != 0 );
-			}
-		}
-
-		// Drop a halloween soul!
-		if ( IsHolidayActive( kHoliday_Halloween ) )
-		{
-			CBaseCombatCharacter* pBaseCombatScorer = dynamic_cast< CBaseCombatCharacter*>( pScorer ? pScorer : pKiller );
-			// No souls for a pure suicide
-			if ( pTFVictim != pBaseCombatScorer )
-			{
-				// Only spawn a soul if the target is a base combat character. 
-				if ( pTFVictim && pBaseCombatScorer )
-				{
-					DropHalloweenSoulPack( 1, pVictim->EyePosition(), pBaseCombatScorer, pTFVictim->GetTeamNumber() );
-				}
-
-				// Also spawn one for the assister
-				if ( pAssister )
-				{
-					DropHalloweenSoulPack( 1, pVictim->EyePosition(), pAssister, pTFVictim->GetTeamNumber() );
-				}
 			}
 		}
 	}
@@ -11886,10 +11753,6 @@ const char *CTFGameRules::GetKillingWeaponName( const CTakeDamageInfo &info, CTF
 	{
 		killer_weapon_name = "spellbook_athletic";
 	}
-	else if ( info.GetDamageCustom() == TF_DMG_CUSTOM_DRAGONS_FURY_BONUS_BURNING )
-	{
-		killer_weapon_name = "dragons_fury_bonus";
-	}
 	else if ( info.GetDamageCustom() == TF_DMG_CUSTOM_KRAMPUS_MELEE )
 	{
 		killer_weapon_name = "krampus_melee";
@@ -12107,10 +11970,6 @@ const char *CTFGameRules::GetKillingWeaponName( const CTakeDamageInfo &info, CTF
 				*iWeaponID = TF_WEAPON_NONE;
 			}
 		}
-	}
-	else if ( 0 == Q_strcmp( killer_weapon_name, "tf_projectile_balloffire" ) )
-	{
-		killer_weapon_name = "dragons_fury";
 	}
 	else if ( 0 == Q_strcmp( killer_weapon_name, "obj_attachment_sapper" ) )
 	{
@@ -14818,14 +14677,6 @@ void CTFGameRules::ClientCommandKeyValues( edict_t *pEntity, KeyValues *pKeyValu
 			{
 				pTFPlayer->UseActionSlotItemReleased();
 			}
-		}
-		else if ( FStrEq( pszCommand, "+inspect_server" ) )
-		{
-			pTFPlayer->InspectButtonPressed();
-		}
-		else if ( FStrEq( pszCommand, "-inspect_server" ) )
-		{
-			pTFPlayer->InspectButtonReleased();
 		}
 		else if ( FStrEq( pszCommand, "+helpme_server" ) )
 		{
@@ -18001,7 +17852,6 @@ convar_tags_t convars_to_check_for_tags[] =
 	{ "tf_mm_strict", "hidden", NULL },
 	{ "tf_medieval", "medieval", NULL },
 	{ "mp_holiday_nogifts", "nogifts" },
-	{ "tf_powerup_mode", "powerup", NULL },
 	{ "tf_gamemode_passtime", "passtime", NULL },
 	{ "tf_gamemode_misc", "misc", NULL }, // catch-all for matchmaking to identify sd, tc, and pd servers via sv_tags
 };
@@ -20195,7 +20045,6 @@ bool CTFGameRules::CanUpgradeWithAttrib( CTFPlayer *pPlayer, int iWeaponSlot, at
 							iWeaponID == TF_WEAPON_PDA_ENGINEER_BUILD ||
 							iWeaponID == TF_WEAPON_INVIS ||
 							iWeaponID == TF_WEAPON_SPELLBOOK ||
-							iWeaponID == TF_WEAPON_JAR_GAS ||
 							iWeaponID == TF_WEAPON_LUNCHBOX ||
 							bRocketPack;
 
@@ -20260,8 +20109,7 @@ bool CTFGameRules::CanUpgradeWithAttrib( CTFPlayer *pPlayer, int iWeaponSlot, at
 			// Non-melee version
 			return ( dynamic_cast< CTFWeaponBaseMelee* >( pEntity ) == NULL && 
 				iWeaponID != TF_WEAPON_NONE && !bHideDmgUpgrades && 
-				iWeaponID != TF_WEAPON_FLAMETHROWER && 
-				iWeaponID != TF_WEAPON_FLAME_BALL &&
+				iWeaponID != TF_WEAPON_FLAMETHROWER &&
 				!WeaponID_IsSniperRifleOrBow( iWeaponID ) && 
 				!( pWeapon && pWeapon->HasEffectBarRegeneration() ) &&
 				!bMinigun );
@@ -20335,8 +20183,7 @@ bool CTFGameRules::CanUpgradeWithAttrib( CTFPlayer *pPlayer, int iWeaponSlot, at
 		break;
 	case 255:	// "airblast pushback scale"
 		{
-			return ( iWeaponID == TF_WEAPON_FLAME_BALL || 
-					 ( iWeaponID == TF_WEAPON_FLAMETHROWER && pWeaponGun && assert_cast< CTFFlameThrower* >( pWeaponGun )->CanAirBlastPushPlayer() ) );
+			return ( iWeaponID == TF_WEAPON_FLAMETHROWER && pWeaponGun && assert_cast< CTFFlameThrower* >( pWeaponGun )->CanAirBlastPushPlayer() );
 		}
 		break;
 	case 266:	// "projectile penetration"
@@ -20474,19 +20321,6 @@ bool CTFGameRules::CanUpgradeWithAttrib( CTFPlayer *pPlayer, int iWeaponSlot, at
 	case 872:	// thermal_thruster_air_launch
 		{
 			return bRocketPack;
-		}
-	case 874:	// mult_item_meter_charge_rate
-		{
-			attrib_value_t eChargeType = ATTRIBUTE_METER_TYPE_NONE;
-			CALL_ATTRIB_HOOK_INT_ON_OTHER( pEntity, eChargeType, item_meter_charge_type );
-			if ( eChargeType != ATTRIBUTE_METER_TYPE_NONE )
-			{
-				return ( iWeaponID != TF_WEAPON_FLAME_BALL );
-			}
-		}
-	case 875:	// explode_on_ignite
-		{
-			return ( iWeaponID == TF_WEAPON_JAR_GAS );
 		}
 	}
 

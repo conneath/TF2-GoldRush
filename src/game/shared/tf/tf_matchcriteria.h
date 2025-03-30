@@ -10,7 +10,6 @@
 #include "tier0/dbg.h"
 
 class CTFGCClientSystem;
-class CMvMMissionSet;
 
 //
 // PerPlayerMatchCriteria

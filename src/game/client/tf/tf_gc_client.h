@@ -26,7 +26,6 @@
 class CTFParty;
 class CTFPartyClient;
 class CTFGSLobby;
-class CMvMMissionSet;
 class IMatchJoiningHandler;
 class CTFGroupMatchCriteria;
 class CTFPerPlayerMatchCriteria;

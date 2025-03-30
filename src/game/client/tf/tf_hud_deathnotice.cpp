@@ -1175,7 +1175,6 @@ void CTFHudDeathNotice::OnGameEvent( IGameEvent *event, int iDeathNoticeMsg )
 		int iDucksThisKill = event->GetInt( "ducks_streaked" );
 
 		// if the active weapon is kill streak
-		C_TFPlayer* pKiller = ToTFPlayer( UTIL_PlayerByIndex( iKillerID ) );
 		C_TFPlayer* pVictim = ToTFPlayer( UTIL_PlayerByIndex( iVictimID ) );
 		C_TFPlayer* pAssister = ToTFPlayer( UTIL_PlayerByIndex( iAssisterID ) );
 

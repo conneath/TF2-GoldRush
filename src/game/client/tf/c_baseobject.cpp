@@ -27,7 +27,6 @@
 #include "eventlist.h"
 #include "c_obj_sapper.h"
 #include "tf_gamerules.h"
-#include "tf_hud_spectator_extras.h"
 #include "tf_proxyentity.h"
 
 // NVNT for building forces
@@ -140,12 +139,6 @@ void C_BaseObject::UpdateOnRemove( void )
 	StopAnimGeneratedSounds();
 
 	DestroyBoneAttachments();
-
-	CTFHudSpectatorExtras *pSpectatorExtras = GET_HUDELEMENT( CTFHudSpectatorExtras );
-	if ( pSpectatorExtras )
- 	{
-		pSpectatorExtras->RemoveEntity( entindex() );
- 	}
 
 	BaseClass::UpdateOnRemove();
 }

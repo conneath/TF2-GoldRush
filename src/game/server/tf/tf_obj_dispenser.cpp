@@ -15,7 +15,6 @@
 #include "world.h"
 #include "explode.h"
 #include "tf_gamestats.h"
-#include "tf_halloween_souls_pickup.h"
 #include "tf_fx.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -728,17 +727,11 @@ void CObjectDispenser::DispenseThink( void )
 		{
 			m_duckTimer.Start( tf_cart_duck_drop_rate.GetFloat() );
 		}
-
-		if ( !m_soulTimer.HasStarted() )
-		{
-			m_soulTimer.Start( tf_cart_soul_drop_rate.GetFloat() );
-		}
 	}
 	else
 	{
 		m_spellTimer.Invalidate();
 		m_duckTimer.Invalidate();
-		m_soulTimer.Invalidate();
 	}
 
 	if ( m_spellTimer.HasStarted() && m_spellTimer.IsElapsed() )
@@ -751,12 +744,6 @@ void CObjectDispenser::DispenseThink( void )
 	{
 		m_duckTimer.Start( tf_cart_duck_drop_rate.GetFloat() );
 		DropDuckPickup();
-	}
-
-	if ( m_soulTimer.HasStarted() && m_soulTimer.IsElapsed() )
-	{
-		m_soulTimer.Start( tf_cart_soul_drop_rate.GetFloat() );
-		DispenseSouls();
 	}
 
 	SetContextThink( &CObjectDispenser::DispenseThink, gpGlobals->curtime + 0.1, DISPENSE_CONTEXT );
@@ -1119,15 +1106,6 @@ void CObjectCartDispenser::DropDuckPickup()
 	if ( TFGameRules()->IsHolidayActive( kHoliday_EOTL ) && TFGameRules()->ShouldDropBonusDuck() )
 	{
 		TFGameRules()->DropBonusDuck( GetAbsOrigin() );
-	}
-}
-
-void CObjectCartDispenser::DispenseSouls()
-{
-	// Give a soul to the entire team
-	if ( TFGameRules() && TFGameRules()->IsHolidayActive( kHoliday_Halloween ) )
-	{
-		TFGameRules()->DropHalloweenSoulPackToTeam( 1, GetAbsOrigin(), GetTeamNumber(), TEAM_SPECTATOR );
 	}
 }
 

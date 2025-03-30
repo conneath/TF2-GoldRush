@@ -66,8 +66,6 @@ public:
 
 	virtual const char *GetPanelName() { return "pda_panel"; }
 
-	virtual bool	CanInspect() const OVERRIDE { return false; }
-
 
 public:	
 	CTFWeaponInfo	*m_pWeaponInfo;

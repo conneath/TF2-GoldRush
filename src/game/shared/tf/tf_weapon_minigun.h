@@ -102,8 +102,6 @@ public:
 	const char*		GetEffectLabelText( void ) { return "#TF_Rage"; }
 	bool			EffectMeterShouldFlash( void );
 
-	virtual bool	CanInspect() const OVERRIDE;
-
 #ifdef GAME_DLL
 	virtual CDmgAccumulator	*GetDmgAccumulator( void ) { return &m_Accumulator; }
 	virtual float GetInitialAfterburnDuration() const OVERRIDE;

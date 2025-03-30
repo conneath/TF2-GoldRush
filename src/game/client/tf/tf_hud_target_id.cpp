@@ -503,16 +503,45 @@ void CTargetID::PerformLayout( void )
 	m_pTargetDataLabel->GetContentSize( iDataW, iDataH );
 	iWidth += max( iTextW, iDataW );
 
+	if ( m_pBGPanel )
+	{
+		m_pBGPanel->SetSize( iWidth, GetTall() );
+	}
+
+	// Put the moveable icon to the right hand of our panel
+	if ( m_pMoveableSubPanel && m_pMoveableSubPanel->IsVisible() )
+	{
+		if ( m_pMoveableKeyLabel && m_pMoveableIcon && m_pMoveableSymbolIcon && m_pMoveableIconBG )
+		{
+			m_pMoveableKeyLabel->SizeToContents();
+
+			int iIndent = XRES( 4 );
+			int iMoveWide = MAX( XRES( 16 ) + m_pMoveableKeyLabel->GetWide() + iIndent, (m_pMoveableIcon->GetWide()) + iIndent + XRES( 8 ) );
+			m_pMoveableKeyLabel->SetWide( iMoveWide );
+			m_pMoveableSubPanel->SetSize( iMoveWide, GetTall() );
+			m_pMoveableSubPanel->SetPos( iWidth - iIndent, 0 );
+
+			int x, y;
+			m_pMoveableKeyLabel->GetPos( x, y );
+			m_pMoveableSymbolIcon->SetPos( (iMoveWide - m_pMoveableSymbolIcon->GetWide()) * 0.5, y - m_pMoveableSymbolIcon->GetTall() );
+			m_pMoveableSymbolIcon->GetPos( x, y );
+			m_pMoveableIcon->SetPos( (iMoveWide - m_pMoveableIcon->GetWide()) * 0.5, y - m_pMoveableIcon->GetTall() );
+			m_pMoveableIconBG->SetSize( m_pMoveableSubPanel->GetWide(), m_pMoveableSubPanel->GetTall() );
+		}
+	}
+
+	if ( m_pMoveableSubPanel && m_pMoveableSubPanel->IsVisible() )
+	{
+		// Now add our extra width to the total size
+		iWidth += m_pMoveableSubPanel->GetWide();
+	}
+
 	SetSize( iWidth, GetTall() );
 
 	int iX, iY;
 	GetPos( iX, iY );
 	SetPos( (ScreenWidth() - iWidth) * 0.5, iY );
 
-	if ( m_pBGPanel )
-	{
-		m_pBGPanel->SetSize( iWidth, GetTall() );
-	}
 };
 
 //-----------------------------------------------------------------------------

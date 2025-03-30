@@ -9,7 +9,6 @@
 #include "tf_hud_itemeffectmeter.h"
 #include "tf_weapon_bat.h"
 #include "tf_weapon_jar.h"
-#include "tf_weapon_jar_gas.h"
 #include "tf_weapon_sword.h"
 #include "tf_weapon_buff_item.h"
 #include "tf_weapon_lunchbox.h"
@@ -334,7 +333,6 @@ void CHudItemEffectMeter::CreateHudElementsForClass( C_TFPlayer* pPlayer, CUtlVe
 		DECLARE_ITEM_EFFECT_METER( CTFFlameThrower, TF_WEAPON_FLAMETHROWER, true, "resource/UI/HudItemEffectMeter_Pyro.res" );
 		DECLARE_ITEM_EFFECT_METER( CTFFlareGun_Revenge, TF_WEAPON_FLAREGUN_REVENGE, false, "resource/UI/HUDItemEffectMeter_Engineer.res" );
 		DECLARE_ITEM_EFFECT_METER( CTFRocketPack, TF_WEAPON_ROCKETPACK, false, "resource/UI/HudRocketPack.res" );
-		lambdaAddItemEffectMeter( "tf_weapon_jar_gas", true );
 		lambdaAddItemEffectMeter( "tf_weapon_rocketlauncher_fireball", false );
 		break;
 	}

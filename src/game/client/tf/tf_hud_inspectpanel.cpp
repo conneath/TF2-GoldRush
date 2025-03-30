@@ -31,50 +31,6 @@
 
 DECLARE_HUDELEMENT( CHudInspectPanel );
 
-static float s_flLastInspectDownTime = 0.f;
-
-void InspectDown()
-{
-	C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
-	if ( pLocalPlayer == NULL )
-	{
-		return;
-	}
-
-	s_flLastInspectDownTime = gpGlobals->curtime;
-
-	KeyValues *kv = new KeyValues( "+inspect_server" );
-	engine->ServerCmdKeyValues( kv );
-
-	pLocalPlayer->SetInspectTime( gpGlobals->curtime );
-}
-static ConCommand s_inspect_down_cmd( "+inspect", InspectDown, "", FCVAR_SERVER_CAN_EXECUTE );
-
-void InspectUp()
-{
-	C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
-	if ( pLocalPlayer == NULL )
-	{
-		return;
-	}
-
-	// quick tap on the inspect button, try to inspect players
-	if ( gpGlobals->curtime - s_flLastInspectDownTime <= 0.2f )
-	{
-		CHudElement *pElement = gHUD.FindElement( "CHudInspectPanel" );
-		if ( pElement )
-		{
-			((CHudInspectPanel *)pElement)->UserCmd_InspectTarget();
-		}
-	}
-
-	KeyValues *kv = new KeyValues( "-inspect_server" );
-	engine->ServerCmdKeyValues( kv );
-
-	pLocalPlayer->SetInspectTime( 0.f );
-}
-static ConCommand s_inspect_up_cmd( "-inspect", InspectUp, "", FCVAR_SERVER_CAN_EXECUTE );
-
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------

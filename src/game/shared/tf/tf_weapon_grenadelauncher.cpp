@@ -468,8 +468,6 @@ bool CTFGrenadeLauncher::IsDoubleDonk( const CBaseEntity* pVictim ) const
 
 float CTFGrenadeLauncher::GetProjectileSpeed( void )
 {
-	CTFPlayer *pOwner = ToTFPlayer( GetOwner() );
-
 	float flLaunchSpeed = TF_GRENADE_LAUNCER_MIN_VEL;
 	CALL_ATTRIB_HOOK_FLOAT( flLaunchSpeed, mult_projectile_speed );
 	return flLaunchSpeed;

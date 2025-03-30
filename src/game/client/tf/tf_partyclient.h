@@ -12,7 +12,6 @@
 #include "playergroup.h"
 
 class CTFGCClientSystem;
-class CMvMMissionSet;
 class CTFGroupMatchCriteria;
 class CTFPerPlayerMatchCriteria;
 class CTFParty;

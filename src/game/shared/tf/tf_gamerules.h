@@ -63,7 +63,6 @@ class CObjectSentrygun;
 class CGhost;
 class CUpgrades;
 
-extern ConVar	tf_spec_xray;
 extern ConVar	tf_avoidteammates;
 extern ConVar	tf_avoidteammates_pushaway;
 extern ConVar	mp_tournament_blueteamname;
@@ -72,7 +71,6 @@ extern ConVar	tf_arena_force_class;
 extern ConVar	tf_arena_change_limit;
 extern ConVar	tf_ctf_bonus_time;
 extern ConVar	tf_mvm_respec_enabled;
-extern ConVar	tf_spawn_glows_duration;
 
 #ifdef GAME_DLL
 extern ConVar mp_tournament_prevent_team_switch_on_readyup;
@@ -793,8 +791,6 @@ bool IsCreepWaveMode( void ) const;
 	virtual bool ClientCommand( CBaseEntity *pEdict, const CCommand &args );
 	virtual void Think();
 
-	void PeriodicHalloweenUpdate();
-
 	virtual bool SwitchToNextBestWeapon( CBaseCombatCharacter *pPlayer, CBaseCombatWeapon *pCurrentWeapon );
 
 	bool CheckWinLimit( bool bAllowEnd = true, int nAddValueWhenChecking = 0 ) OVERRIDE;
@@ -981,9 +977,6 @@ public:
 	bool ShouldDropBonusDuck( void );
 	bool ShouldDropBonusDuckFromPlayer( CTFPlayer *pScorer, CTFPlayer *pVictim );
 	void DropBonusDuck( const Vector& vPosition, CTFPlayer *pScorer = NULL, CTFPlayer *pAssistor = NULL, CTFPlayer *pVictim = NULL, bool bCrit = false, bool bObjective = false ) const;
-
-	void DropHalloweenSoulPackToTeam( int nAmount, const Vector& vecPosition, int nTeamNumber, int nSourceTeam );
-	void DropHalloweenSoulPack( int nAmount, const Vector& vecSource, CBaseEntity *pTarget, int nSourceTeam );
 
 	void MatchSummaryStart( void );
 	void MatchSummaryEnd( void );
@@ -1356,8 +1349,6 @@ public:
 	PlayerHistoryInfo_t *PlayerHistory_GetPlayerInfo( CTFPlayer *pTFPlayer );
 	int PlayerHistory_GetTimeSinceLastSeen( CTFPlayer *pTFPlayer );
 
-	CUtlVector< Vector > *GetHalloweenSpawnLocations() { return &m_halloweenGiftSpawnLocations; }
-
 	bool BAttemptMapVoteRollingMatch();
 	bool BIsManagedMatchEndImminent( void );
 
@@ -1377,7 +1368,6 @@ private:
 
 	bool	m_bMapCycleNeedsUpdate;
 
-	CUtlVector< Vector > m_halloweenGiftSpawnLocations;		// vector of valid gift spawn locations from the map
 	float	m_flCompModeRespawnPlayersAtMatchStart;
 
 	CHandle< CEntitySoldierStatue > m_hSoldierStatue = nullptr;

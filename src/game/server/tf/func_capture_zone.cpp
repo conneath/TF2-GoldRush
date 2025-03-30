@@ -340,10 +340,6 @@ void CCaptureZone::Capture( CBaseEntity *pOther )
 					{
 						TFGameRules()->DropBonusDuck( pPlayer->GetAbsOrigin(), pPlayer, NULL, NULL, false, true );
 					}
-					else if ( TFGameRules()->IsHolidayActive( kHoliday_Halloween ) )
-					{
-						TFGameRules()->DropHalloweenSoulPackToTeam( 5, GetAbsOrigin(), pPlayer->GetTeamNumber(), TEAM_SPECTATOR );
-					}
 				}
 			}
 		}

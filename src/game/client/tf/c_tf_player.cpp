@@ -275,7 +275,6 @@ BonusEffect_t g_BonusEffects[ kBonusEffect_Count ] =
 	{ "TFPlayer.DoubleDonk",				"doubledonk_text",		PATTACH_POINT_FOLLOW,	"head",			kEffectFilter_BothTeams,	kEffectFilter_BothTeams,		true, true },
 	{ NULL,									"sploosh_text",			PATTACH_POINT_FOLLOW,	"head",			kEffectFilter_BothTeams,	kEffectFilter_BothTeams,		true, false },
 	{ NULL,									NULL,					PATTACH_POINT_FOLLOW,	"head",			kEffectFilter_AttackerOnly,	kEffectFilter_AttackerOnly,		true, false },
-	{ NULL,									"dragons_fury_effect",	PATTACH_ABSORIGIN,		NULL,			kEffectFilter_AttackerOnly, kEffectFilter_AttackerOnly,		true, true },
 	{ "TFPlayer.Stomp",						"stomp_text",			PATTACH_POINT_FOLLOW,	"head",			kEffectFilter_BothTeams,	kEffectFilter_BothTeams,		true, true },
 };
 
@@ -3746,7 +3745,6 @@ IMPLEMENT_CLIENTCLASS_DT( C_TFPlayer, DT_TFPlayer, CTFPlayer )
 	RecvPropEHandle( RECVINFO( m_hGrapplingHookTarget ) ),
 	RecvPropEHandle( RECVINFO( m_hSecondaryLastWeapon ) ),
 	RecvPropBool( RECVINFO( m_bUsingActionSlot ) ),
-	RecvPropFloat( RECVINFO( m_flInspectTime ) ),
 	RecvPropFloat( RECVINFO( m_flHelpmeButtonPressTime ) ),
 	RecvPropInt( RECVINFO( m_iCampaignMedals ) ),
 	RecvPropInt( RECVINFO( m_iPlayerSkinOverride ) ),
@@ -3769,7 +3767,6 @@ BEGIN_PREDICTION_DATA( C_TFPlayer )
 	DEFINE_PRED_FIELD( m_flTauntYaw, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flCurrentTauntMoveSpeed, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flVehicleReverseTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_flInspectTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flHelpmeButtonPressTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 END_PREDICTION_DATA()
 
@@ -3913,12 +3910,8 @@ C_TFPlayer::C_TFPlayer() :
 	m_bUsingActionSlot = false;
 	m_iCampaignMedals = 0;
 
-	m_flInspectTime = 0.f;
-
 	m_flHelpmeButtonPressTime = 0.f;
 	m_bRegenerating = false;
-
-	m_bNotifiedWeaponInspectThisLife = false;
 
 	m_pPasstimePlayerReticle = NULL;
 	m_pPasstimeAskForBallReticle = NULL;
@@ -4709,11 +4702,6 @@ void C_TFPlayer::OnDataChanged( DataUpdateType_t updateType )
 		if ( pActiveWeapon )
 		{
 			pActiveWeapon->UpdateVisibility();
-
-			if ( GetLocalTFPlayer() == this && pActiveWeapon->CanInspect() )
-			{
-				HandleInspectHint();
-			}
 		}
 
 		m_hOldActiveWeapon = pActiveWeapon;
@@ -5848,19 +5836,6 @@ void C_TFPlayer::ClientThink()
 		CSoundEnvelopeController &controller = CSoundEnvelopeController::GetController();
 		controller.SoundDestroy( m_pFallingSoundLoop );
 		m_pFallingSoundLoop = NULL;
-	}
-
-	if ( HasTheFlag() && GetGlowObject() )
-	{
-		C_TFItem *pFlag = GetItem();
-		if ( pFlag->ShouldHideGlowEffect() )
-		{
-			GetGlowObject()->SetEntity( NULL );
-		}
-		else
-		{
-			GetGlowObject()->SetEntity( this );
-		}
 	}
 
 	m_Shared.ClientKillStreakBuffThink();
@@ -7736,8 +7711,6 @@ void C_TFPlayer::ClientPlayerRespawn( void )
 			m_hRevivePrompt->MarkForDeletion();
 			m_hRevivePrompt = NULL;
 		}
-
-		m_bNotifiedWeaponInspectThisLife = false;
 
 		// make sure the chat window has been restored to the appropriate place
 		g_pClientMode->GetViewportAnimationController()->StartAnimationSequence( "CompetitiveGame_RestoreChatWindow", false );
@@ -11143,33 +11116,6 @@ void C_TFPlayer::GetGlowEffectColor( float *r, float *g, float *b )
 
 	int nTeam = GetTeamNumber();
 
-	C_TFPlayer *pLocalPlayer = GetLocalTFPlayer();
-	// In CTF, show health color glow for alive player
-	if ( pLocalPlayer && pLocalPlayer->IsAlive() && TFGameRules() && ( TFGameRules()->GetGameType() == TF_GAMETYPE_CTF ) && HasTheFlag() )
-	{
-		float flHealth = (float)GetHealth() / (float)GetMaxHealth();
-
-		if ( flHealth > 0.6 )
-		{
-			*r = 0.33f;
-			*g = 0.75f;
-			*b = 0.23f;
-		}
-		else if( flHealth > 0.3 )
-		{
-			*r = 0.75f;
-			*g = 0.72f;
-			*b = 0.23f;
-		}
-		else
-		{
-			*r = 0.75f;
-			*g = 0.23f;
-			*b = 0.23f;
-		}
-		return;
-	}
-
 	if ( !engine->IsHLTV() && ( GetLocalPlayerTeam() >= FIRST_GAME_TEAM ) )
 	{
 		if ( IsPlayerClass( TF_CLASS_SPY ) && m_Shared.InCond( TF_COND_DISGUISED ) && ( GetTeamNumber() != GetLocalPlayerTeam() ) )
@@ -11180,45 +11126,6 @@ void C_TFPlayer::GetGlowEffectColor( float *r, float *g, float *b )
 
 	TFGameRules()->GetTeamGlowColor( nTeam, *r, *g, *b );
 }
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-static ConVar tf_inspect_hint_count( "tf_inspect_hint_count", "0", FCVAR_ARCHIVE );
-void C_TFPlayer::HandleInspectHint()
-{
-	int nNotifyCount = tf_inspect_hint_count.GetInt();
-	if ( nNotifyCount > 10 )
-		return;
-
-	if ( m_bNotifiedWeaponInspectThisLife )
-		return;
-
-	CHudNotificationPanel *pNotifyPanel = GET_HUDELEMENT( CHudNotificationPanel );
-	if ( pNotifyPanel )
-	{
-		wchar_t szNotification[1024]=L"";
-		wchar_t wKeyBind[80] = L"";
-		const wchar_t *wpszFormat = g_pVGuiLocalize->Find( "#Hint_inspect_weapon" );
-		if ( wpszFormat )
-		{
-			const char *key = engine->Key_LookupBinding( "+inspect" );
-			if ( !key || FStrEq( key, "(null)" ) )
-			{
-				key = "< not bound >";
-			}
-
-			g_pVGuiLocalize->ConvertANSIToUnicode( key, wKeyBind, sizeof( wKeyBind ) );
-			g_pVGuiLocalize->ConstructString_safe( szNotification, wpszFormat, 1, wKeyBind );
-			pNotifyPanel->SetupNotifyCustom( szNotification, "", GetTeamNumber() );
-
-			tf_inspect_hint_count.SetValue( nNotifyCount + 1 );
-		}
-
-		m_bNotifiedWeaponInspectThisLife = true;
-	}
-}
-
 
 //-----------------------------------------------------------------------------
 // Purpose: 

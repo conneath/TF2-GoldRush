@@ -27,10 +27,6 @@
 
 #define TF_HALLOWEEN_PICKUP_RETURN_DELAY	10
 
-#ifdef GAME_DLL
-IMPLEMENT_AUTO_LIST( IHalloweenGiftSpawnAutoList );
-#endif // GAME_DLL
-
 //=============================================================================
 //
 // CTF Halloween Pickup defines.
@@ -69,25 +65,6 @@ BEGIN_NETWORK_TABLE( CBonusDuckPickup, DT_CBonusDuckPickup )
 END_NETWORK_TABLE()
 
 LINK_ENTITY_TO_CLASS( tf_bonus_duck_pickup, CBonusDuckPickup );
-// ************************************************************************************
-#ifdef GAME_DLL
-LINK_ENTITY_TO_CLASS( tf_halloween_gift_spawn_location, CHalloweenGiftSpawnLocation );
-#endif
-// ************************************************************************************
-IMPLEMENT_NETWORKCLASS_ALIASED( HalloweenGiftPickup, DT_CHalloweenGiftPickup )
-
-BEGIN_NETWORK_TABLE( CHalloweenGiftPickup, DT_CHalloweenGiftPickup )
-#ifdef CLIENT_DLL
-RecvPropEHandle( RECVINFO( m_hTargetPlayer ) ),
-#else
-SendPropEHandle( SENDINFO( m_hTargetPlayer ) ),
-#endif
-END_NETWORK_TABLE()
-
-BEGIN_DATADESC( CHalloweenGiftPickup )
-END_DATADESC();
-
-LINK_ENTITY_TO_CLASS( tf_halloween_gift_pickup, CHalloweenGiftPickup );
 // ************************************************************************************
 
 // ************************************************************************************
@@ -596,158 +573,5 @@ void CBonusDuckPickup::OnDataChanged( DataUpdateType_t updateType )
 }
 
 #endif // GAME_DLL
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Halloween Gift Spawn
-//-----------------------------------------------------------------------------
-#ifdef GAME_DLL
-CHalloweenGiftSpawnLocation::CHalloweenGiftSpawnLocation()
-{
-}
-#endif
-//-----------------------------------------------------------------------------
-CHalloweenGiftPickup::CHalloweenGiftPickup()
-{
-	m_hTargetPlayer = NULL;
-#ifdef CLIENT_DLL
-	m_pPreviousTargetPlayer = NULL;
-#endif
-}
-//-----------------------------------------------------------------------------
-void CHalloweenGiftPickup::Precache( void )
-{
-	BaseClass::Precache();
-
-	PrecacheScriptSound( "sf15.Merasmus.Gargoyle.Spawn" );
-	PrecacheScriptSound( "sf15.Merasmus.Gargoyle.Gone" );
-	PrecacheScriptSound( "sf15.Merasmus.Gargoyle.Got" );
-}
-
-//------------------------------------------------------------------------
-void CHalloweenGiftPickup::Spawn( void )
-{
-	BaseClass::Spawn();
-#ifdef GAME_DLL
-	// Set a timer
-	SetContextThink( &CHalloweenGiftPickup::DespawnGift, gpGlobals->curtime + tf_halloween_gift_lifetime.GetInt(), "DespawnGift" );
-	AddSpawnFlags( SF_NORESPAWN );
-#endif // CLIENT_DLL
-}
-
-#ifdef GAME_DLL
-//------------------------------------------------------------------------
-// Despawn (and notify client) and then remove
-//------------------------------------------------------------------------
-void CHalloweenGiftPickup::DespawnGift()
-{
-	SetTargetPlayer( NULL );
-	SetContextThink( &CHalloweenGiftPickup::RemoveGift, gpGlobals->curtime + 1.0, "RemoveGift" );
-}
-//------------------------------------------------------------------------
-void CHalloweenGiftPickup::RemoveGift()
-{
-	UTIL_Remove( this );
-}
-
-//------------------------------------------------------------------------
-void CHalloweenGiftPickup::SetTargetPlayer( CTFPlayer *pTarget )
-{
-	m_hTargetPlayer = pTarget; 
-}
-//------------------------------------------------------------------------
-bool CHalloweenGiftPickup::ValidTouch( CBasePlayer *pPlayer )
-{
-	CTFPlayer *pTFPlayer = ToTFPlayer( pPlayer );
-	if ( pTFPlayer && pTFPlayer != m_hTargetPlayer.Get() )
-		return false;
-
-	return true;
-}
-//------------------------------------------------------------------------
-bool CHalloweenGiftPickup::MyTouch( CBasePlayer *pPlayer )
-{
-	CTFPlayer *pTFPlayer = ToTFPlayer( pPlayer );
-	if ( pTFPlayer && pTFPlayer != m_hTargetPlayer.Get() )
-		return false;
-
-	// TODO: Give contract points
-
-	// Visual effects
-	Vector vecOrigin = GetAbsOrigin();
-	CPVSFilter filter( vecOrigin );
-
-	TE_TFParticleEffect( filter, 0.0, "duck_collect_green", vecOrigin, vec3_angle );
-
-	// Sound effects
-	CSingleUserRecipientFilter touchingFilter( pPlayer );
-	EmitSound( touchingFilter, entindex(), "Halloween.PumpkinPickup" );
-	EmitSound( touchingFilter, entindex(), "sf15.Merasmus.Gargoyle.Got" );
-
-	// Give souls to the collecting player
-	for( int i=0; i<10; ++i )
-	{
-		TFGameRules()->DropHalloweenSoulPack( 1, vecOrigin, pPlayer, TEAM_SPECTATOR );
-	}
-
-	// Achievement
-	if ( TFGameRules() && TFGameRules()->IsHalloweenScenario( CTFGameRules::HALLOWEEN_SCENARIO_MANN_MANOR ) )
-	{
-		pTFPlayer->AwardAchievement( ACHIEVEMENT_TF_HALLOWEEN_COLLECT_GOODY_BAG );
-	}
-	return true;
-}
-
-#endif // GAME_DLL
-
-#ifdef CLIENT_DLL
-//-----------------------------------------------------------------------------
-void CHalloweenGiftPickup::OnDataChanged( DataUpdateType_t updateType )
-{
-	BaseClass::OnDataChanged( updateType );
-
-	if ( updateType == DATA_UPDATE_DATATABLE_CHANGED )
-	{
-		C_TFPlayer *pLocalPlayer = C_TFPlayer::GetLocalTFPlayer();
-		if ( pLocalPlayer )
-		{
-			// Gift Added
-			if ( m_hTargetPlayer.Get() != NULL && m_pPreviousTargetPlayer == NULL && m_hTargetPlayer.Get() == pLocalPlayer  )
-			{
-				// Notification
-				CEconNotification *pNotification = new CEconNotification();
-				pNotification->SetText( "#TF_HalloweenItem_SoulAppeared" );
-				pNotification->SetLifetime( 5.0f );
-				pNotification->SetSoundFilename( "ui/halloween_loot_spawn.wav" );
-				NotificationQueue_Add( pNotification );
-				pLocalPlayer->EmitSound( "sf15.Merasmus.Gargoyle.Spawn" );
-			}
-			// Gift Despawned
-			if ( m_hTargetPlayer.Get() == NULL && m_pPreviousTargetPlayer != NULL && m_pPreviousTargetPlayer == pLocalPlayer )
-			{
-				// Notification
-				CEconNotification *pNotification = new CEconNotification();
-				pNotification->SetText( "#TF_HalloweenItem_SoulDisappeared" );
-				pNotification->SetLifetime( 5.0f );
-				pNotification->SetSoundFilename( "ui/halloween_loot_found.wav" );
-				NotificationQueue_Add( pNotification );
-				pLocalPlayer->EmitSound( "sf15.Merasmus.Gargoyle.Gone" );
-			}
-
-			m_pPreviousTargetPlayer = m_hTargetPlayer.Get();
-		}
-	}
-
-}
-//------------------------------------------------------------------------
-bool CHalloweenGiftPickup::ShouldDraw()
-{
-	CTFPlayer *pOwner = m_hTargetPlayer.Get();
-	if ( pOwner != C_TFPlayer::GetLocalTFPlayer() )
-		return false;
-
-	return BaseClass::ShouldDraw();
-}
-#endif
 
 

@@ -160,67 +160,6 @@ private:
 	DECLARE_DATADESC();
 };
 
-#ifdef GAME_DLL
-//----------------------------------------------------------------------------
-DECLARE_AUTO_LIST( IHalloweenGiftSpawnAutoList );
-
-//*************************************************************************************************
-// Dumb entity that is placed in Hammer.
-// On Map load, server finds all the locations and makes note then deletes the entity
-class CHalloweenGiftSpawnLocation : public CBaseEntity, public IHalloweenGiftSpawnAutoList
-{
-public:
-	DECLARE_CLASS( CHalloweenGiftSpawnLocation, CBaseEntity );
-	
-	CHalloweenGiftSpawnLocation();
-};
-
-#endif // GAME_DLL
-
-//*************************************************************************************************
-// Networked Entity that represents a gift.  Only visible and 'touchable' by the intended target
-// Has a lifetime
-// A server can spawn multiple of these for different people or the same person but each gift has a single target
-class CHalloweenGiftPickup : public CHalloweenPickup
-{
-public:
-	DECLARE_CLASS( CHalloweenGiftPickup, CHalloweenPickup );
-
-	DECLARE_NETWORKCLASS();
-
-	CHalloweenGiftPickup();
-	//~CHalloweenGiftPickup();
-
-	virtual void	Precache( void ) OVERRIDE;
-	void			Spawn( void );
-
-#ifdef GAME_DLL
-	void			SetTargetPlayer( CTFPlayer *pTarget );		// Must be called before spawn
-	void			DespawnGift();
-	void			RemoveGift();
-
-	virtual const char *GetDefaultPowerupModel( void ) OVERRIDE
-	{
-		return TF_GIFT_MODEL;
-	}
-
-	//virtual float	GetLifeTime() { if ( m_flLifeTime == 0 ) { m_flLifeTime = RandomFloat( 17.0f, 20.0f ); } return m_flLifeTime; }
-	virtual bool	ValidTouch( CBasePlayer *pPlayer ) OVERRIDE;
-	virtual bool	MyTouch( CBasePlayer *pPlayer ) OVERRIDE;
-#endif
-
-#ifdef CLIENT_DLL
-	virtual bool	ShouldDraw();
-	virtual void	OnDataChanged( DataUpdateType_t updateType ) OVERRIDE;
-
-	CTFPlayer *m_pPreviousTargetPlayer;
-#endif
-
-	CNetworkHandle( CTFPlayer, m_hTargetPlayer );
-
-	DECLARE_DATADESC();
-};
-
 
 
 //*************************************************************************************************

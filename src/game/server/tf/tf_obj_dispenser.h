@@ -137,7 +137,6 @@ public:
 
 	virtual void DropSpellPickup() { /* DO NOTHING */ }
 	virtual void DropDuckPickup() { /* DO NOTHING */ }
-	virtual void DispenseSouls() { /* Do nothing */}
 
 	virtual float GetHealRate() const;
 	virtual void StartHealing( CBaseEntity *pOther );
@@ -199,7 +198,6 @@ private:
 
 	CountdownTimer m_spellTimer;
 	CountdownTimer m_duckTimer;
-	CountdownTimer m_soulTimer;
 
 	float m_flPrevRadius;
 	bool m_bPlayAmmoPickupSound;
@@ -229,7 +227,6 @@ public:
 	virtual int	DispenseMetal( CTFPlayer *pPlayer );
 	virtual void DropSpellPickup();
 	virtual void DropDuckPickup();
-	virtual void DispenseSouls() OVERRIDE;
 
 	virtual bool	CanBeUpgraded( CTFPlayer *pPlayer ){ return false; }
 	virtual void	SetModel( const char *pModel );

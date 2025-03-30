@@ -286,17 +286,6 @@ bool CTFRocketLauncher::ShouldBlockPrimaryFire()
 }
 
 //-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-bool CTFRocketLauncher::CanInspect() const
-{
-	if ( AutoFiresFullClip() && ( m_iClip1 > 0 ) )
-		return false;
-
-	return BaseClass::CanInspect();
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
 CBaseEntity *CTFRocketLauncher::FireProjectile( CTFPlayer *pPlayer )

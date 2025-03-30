@@ -266,7 +266,6 @@ ETFCond g_aDebuffConditions[] =
 	TF_COND_URINE,
 	TF_COND_BLEEDING,
 	TF_COND_MAD_MILK,
-	TF_COND_GAS,
 	TF_COND_LAST
 };
 
@@ -275,8 +274,7 @@ bool ConditionExpiresFast( ETFCond eCond )
 	return eCond == TF_COND_BURNING
 		|| eCond == TF_COND_URINE
 		|| eCond == TF_COND_BLEEDING
-		|| eCond == TF_COND_MAD_MILK
-		|| eCond == TF_COND_GAS;
+		|| eCond == TF_COND_MAD_MILK;
 }
 
 static const char *g_aConditionNames[] =
@@ -404,14 +402,11 @@ static const char *g_aConditionNames[] =
 	"TF_COND_GRAPPLED_TO_PLAYER",               // = 120
 	"TF_COND_GRAPPLED_BY_PLAYER",               // = 121
 	"TF_COND_PARACHUTE_DEPLOYED",               // = 122
-	"TF_COND_GAS",                              // = 123
-	"TF_COND_BURNING_PYRO",                     // = 124
-	"TF_COND_ROCKETPACK",                       // = 125
-	"TF_COND_LOST_FOOTING",                     // = 126
-	"TF_COND_AIR_CURRENT",                      // = 127
-	"TF_COND_HALLOWEEN_HELL_HEAL",              // = 128
-	"TF_COND_POWERUPMODE_DOMINANT",             // = 129
-	"TF_COND_IMMUNE_TO_PUSHBACK",				// = 130
+	"TF_COND_ROCKETPACK",                       // = 123
+	"TF_COND_LOST_FOOTING",                     // = 124
+	"TF_COND_AIR_CURRENT",                      // = 125
+	"TF_COND_HALLOWEEN_HELL_HEAL",              // = 126
+	"TF_COND_IMMUNE_TO_PUSHBACK",				// = 127
 
 	//
 	// ADD NEW ITEMS HERE TO AVOID BREAKING DEMOS
@@ -692,9 +687,6 @@ const char *g_aWeaponNames[] =
 	"TF_WEAPON_BREAKABLE_SIGN",
 	"TF_WEAPON_ROCKETPACK",
 	"TF_WEAPON_SLAP",
-	"TF_WEAPON_JAR_GAS",
-	"TF_WEAPON_GRENADE_JAR_GAS",
-	"TF_WEPON_FLAME_BALL",
 
 };
 COMPILE_TIME_ASSERT( ARRAYSIZE( g_aWeaponNames ) == TF_WEAPON_COUNT );
@@ -808,9 +800,6 @@ int g_aWeaponDamageTypes[] =
 	DMG_CLUB,		// TF_WEAPON_BREAKABLE_SIGN,
 	DMG_GENERIC, // TF_WEAPON_ROCKETPACK,
 	DMG_CLUB, // TF_WEAPON_SLAP,
-	DMG_GENERIC, // TF_WEAPON_JAR_GAS
-	DMG_GENERIC, // TF_WEAPON_GRENADE_JAR_GAS
-	DMG_GENERIC | DMG_PREVENT_PHYSICS_FORCE, // TF_WEAPON_FLAME_BALL
 
 };
 
@@ -894,8 +883,6 @@ const char *g_szSpecialDamageNames[] =
 	"TF_DMG_CUSTOM_KART",
 	"TF_DMG_CUSTOM_GIANT_HAMMER",
 	"TF_DMG_CUSTOM_RUNE_REFLECT",
-	"TF_DMG_CUSTOM_DRAGONS_FURY_IGNITE",
-	"TF_DMG_CUSTOM_DRAGONS_FURY_BONUS_BURNING",
 	"TF_DMG_CUSTOM_SLAP_KILL",
 	"TF_DMG_CUSTOM_CROC",
 	"TF_DMG_CUSTOM_TAUNTATK_GASBLAST",
@@ -957,8 +944,6 @@ const char *g_szProjectileNames[] =
 	"projectile_grapplinghook",
 	"projectile_sentry_rocket",
 	"projectile_bread_monster",
-	"projectile_jar_gas",
-	"tf_projectile_balloffire",
 
 };
 COMPILE_TIME_ASSERT( ARRAYSIZE( g_szProjectileNames ) == TF_NUM_PROJECTILES );
@@ -995,8 +980,6 @@ int g_iProjectileWeapons[] =
 	TF_PROJECTILE_GRAPPLINGHOOK,
 	TF_WEAPON_SENTRY_ROCKET,
 	TF_WEAPON_THROWABLE,
-	TF_WEAPON_JAR_GAS,
-	TF_WEAPON_FLAME_BALL,
 
 };
 

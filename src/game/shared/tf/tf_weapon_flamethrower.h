@@ -21,7 +21,6 @@
 
 	#define CTFFlameThrower C_TFFlameThrower
 	#define CTFFlameRocket C_TFFlameRocket
-	#define CTFWeaponFlameBall C_TFWeaponFlameBall
 #else
 	#include "tf_projectile_rocket.h"
 	#include "baseentity.h"

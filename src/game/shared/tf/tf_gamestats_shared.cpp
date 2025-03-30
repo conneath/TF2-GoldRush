@@ -552,7 +552,6 @@ const char* GetGameTypeID()
 	ConVarRef tf_gamemode_sd( "tf_gamemode_sd" );
 	ConVarRef tf_gamemode_payload( "tf_gamemode_payload" );
 	ConVarRef tf_gamemode_mvm( "tf_gamemode_mvm" );
-	ConVarRef tf_powerup_mode( "tf_powerup_mode" );
 	ConVarRef tf_gamemode_passtime( "tf_gamemode_passtime" );
 
 	const char* pszGameTypeID = NULL;
@@ -566,14 +565,7 @@ const char* GetGameTypeID()
 	}
 	else if ( tf_gamemode_ctf.GetBool() )
 	{
-		if ( tf_powerup_mode.GetBool() )
-		{
-			pszGameTypeID = "ctf_mannpower";
-		}
-		else
-		{
-			pszGameTypeID = "ctf";
-		}
+		pszGameTypeID = "ctf";
 	}
 	else if ( tf_gamemode_sd.GetBool() )
 	{

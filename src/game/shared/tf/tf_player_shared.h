@@ -542,9 +542,7 @@ public:
 
 	// Stuns
 	stun_struct_t *GetActiveStunInfo( void ) const;
-#ifdef GAME_DLL
 	void	StunPlayer( float flTime, float flReductionAmount, int iStunFlags = TF_STUN_MOVEMENT, CTFPlayer* pAttacker = NULL );
-#endif // GAME_DLL
 	float	GetAmountStunned( int iStunFlags );
 	bool	IsLoserStateStunned( void ) const;
 	bool	IsControlStunned( void );
@@ -795,7 +793,6 @@ private:
 	void OnAddInPurgatory( void );
 	void OnAddCompetitiveWinner( void );
 	void OnAddCompetitiveLoser( void );
-	void OnAddCondGas( void );
 	void OnAddRocketPack( void );
 
 
@@ -868,9 +865,7 @@ private:
 	void OnRemoveInPurgatory( void );
 	void OnRemoveCompetitiveWinner( void );
 	void OnRemoveCompetitiveLoser( void );
-	void OnRemoveCondGas( void );
 	void OnRemoveRocketPack( void );
-	void OnRemoveBurningPyro( void );
 	
 
 	// Starting a new trend, putting Add and Remove next to each other
@@ -1185,6 +1180,8 @@ private:
 #endif
 
 public:
+	bool m_bScattergunJump;
+
 	float	m_flStunFade;
 	float	m_flStunEnd;
 	float	m_flStunMid;

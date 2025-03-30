@@ -125,7 +125,6 @@
 #include "tf_revive.h"
 #include "tf_logic_halloween_2014.h"
 #include "tf_logic_player_destruction.h"
-#include "tf_weapon_rocketpack.h"
 #include "tf_weapon_slap.h"
 #include "func_croc.h"
 #include "tf_weapon_bonesaw.h"
@@ -166,9 +165,6 @@ extern ConVar	tf_gravetalk;
 
 extern ConVar	tf_bot_quota_mode;
 extern ConVar	tf_bot_quota;
-extern ConVar	halloween_starting_souls;
-
-extern ConVar tf_powerup_mode_killcount_timer_length;
 
 float GetCurrentGravity( void );
 
@@ -236,7 +232,6 @@ ConVar tf_halloween_giant_health_scale( "tf_halloween_giant_health_scale", "10",
 ConVar tf_grapplinghook_los_force_detach_time( "tf_grapplinghook_los_force_detach_time", "1", FCVAR_CHEAT );
 ConVar tf_powerup_max_charge_time( "tf_powerup_max_charge_time", "30", FCVAR_CHEAT );
 
-extern ConVar tf_powerup_mode;
 extern ConVar tf_mvm_buybacks_method;
 extern ConVar tf_mvm_buybacks_per_wave;
 
@@ -587,7 +582,6 @@ BEGIN_ENT_SCRIPTDESC( CTFPlayer, CBaseMultiplayerPlayer , "Team Fortress 2 Playe
 	DEFINE_SCRIPTFUNC( GetCurrentTauntMoveSpeed, "" )
 	DEFINE_SCRIPTFUNC( SetCurrentTauntMoveSpeed, "" )
 	DEFINE_SCRIPTFUNC( IsUsingActionSlot, "" )
-	DEFINE_SCRIPTFUNC( IsInspecting, "" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptGetGrapplingHookTarget, "GetGrapplingHookTarget", "What entity is the player grappling?" )
 	DEFINE_SCRIPTFUNC_NAMED( ScriptSetGrapplingHookTarget, "SetGrapplingHookTarget", "Set the player's target grapple entity" )
 	DEFINE_SCRIPTFUNC( AddCustomAttribute, "Add a custom attribute to the player" )
@@ -829,7 +823,6 @@ IMPLEMENT_SERVERCLASS_ST( CTFPlayer, DT_TFPlayer )
 	SendPropEHandle( SENDINFO( m_hGrapplingHookTarget ) ),
 	SendPropEHandle( SENDINFO( m_hSecondaryLastWeapon ) ),
 	SendPropBool( SENDINFO( m_bUsingActionSlot ) ),
-	SendPropFloat( SENDINFO( m_flInspectTime ) ),
 	SendPropFloat( SENDINFO( m_flHelpmeButtonPressTime ) ),
 	SendPropInt( SENDINFO( m_iCampaignMedals ) ),
 	SendPropInt( SENDINFO( m_iPlayerSkinOverride ) ),
@@ -906,7 +899,6 @@ CTFPlayer::CTFPlayer()
 	m_flNextChangeClassTime = 0.0f;
 	m_flNextChangeTeamTime = 0.0f;
 
-	m_bScattergunJump = false;
 	m_iOldStunFlags = 0;
 	m_iLastWeaponSlot = 1;
 	m_iNumberofDominations = 0;
@@ -1360,35 +1352,6 @@ void CTFPlayer::TFPlayerThink()
 	else
 	{
 		m_iLeftGroundHealth = -1;
-		if ( GetFlags() & FL_ONGROUND )
-		{
-			// Airborne conditions end on ground contact
-			m_Shared.RemoveCond( TF_COND_KNOCKED_INTO_AIR );
-			m_Shared.RemoveCond( TF_COND_AIR_CURRENT );
-
-			if ( m_Shared.InCond( TF_COND_ROCKETPACK ) )
-			{
-				// Make sure we're still not dealing with launch, where it's possible
-				// to hit your head and fall to the ground before the second stage.
-				CTFWeaponBase *pRocketPack = Weapon_OwnsThisID( TF_WEAPON_ROCKETPACK );
-				if ( pRocketPack )
-				{
-					if ( gpGlobals->curtime > ( static_cast< CTFRocketPack* >( pRocketPack )->GetRefireTime() ) )
-					{
-						EmitSound( "Weapon_RocketPack.BoostersShutdown" );
-						EmitSound( "Weapon_RocketPack.Land" );
-						m_Shared.RemoveCond( TF_COND_ROCKETPACK );
-
-						IGameEvent *pEvent = gameeventmanager->CreateEvent( "rocketpack_landed" );
-						if ( pEvent )
-						{
-							pEvent->SetInt( "userid", GetUserID() );
-							gameeventmanager->FireEvent( pEvent );
-						}
-					}
-				}
-			}
-		}
 
 		if ( m_iBlastJumpState )
 		{
@@ -3327,9 +3290,6 @@ void CTFPlayer::Spawn()
 		m_bRespawning = false;
 		m_Shared.RemoveAllCond(); // Remove conc'd, burning, rotting, hallucinating, etc.
 
-		// add team glows for a period of time after we respawn
-		m_Shared.AddCond( TF_COND_TEAM_GLOWS, tf_spawn_glows_duration.GetInt() );
-
 		UpdateSkin( GetTeamNumber() );
 
 		// Prevent firing for a second so players don't blow their faces off
@@ -3449,7 +3409,6 @@ void CTFPlayer::Spawn()
 
 	m_Shared.SetFeignDeathReady( false );
 
-	m_bScattergunJump = false;
 	m_iOldStunFlags = 0;
 
 	m_flAccumulatedHealthRegen = 0;
@@ -3510,8 +3469,6 @@ void CTFPlayer::Spawn()
 	m_hGrapplingHookTarget = NULL;
 	m_nHookAttachedPlayers = 0;
 	m_bUsingActionSlot = false;
-
-	m_flInspectTime = 0.f;
 
 	m_flHelpmeButtonPressTime = 0.f;
 
@@ -3706,11 +3663,6 @@ void CTFPlayer::Regenerate( bool bRefillHealthAndAmmo /*= true*/ )
 		if ( m_Shared.InCond( TF_COND_MAD_MILK ) )
 		{
 			m_Shared.RemoveCond( TF_COND_MAD_MILK );
-		}
-
-		if ( m_Shared.InCond( TF_COND_GAS ) )
-		{
-			m_Shared.RemoveCond( TF_COND_GAS );
 		}
 
 		if ( m_Shared.InCond( TF_COND_BLEEDING ) )
@@ -4687,22 +4639,6 @@ void CTFPlayer::UseActionSlotItemReleased( void )
 			return;
 		}
 	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Handles pressing the inspect key.
-//-----------------------------------------------------------------------------
-void CTFPlayer::InspectButtonPressed()
-{
-	m_flInspectTime = gpGlobals->curtime;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: Handles releasing the inspect key.
-//-----------------------------------------------------------------------------
-void CTFPlayer::InspectButtonReleased()
-{
-	m_flInspectTime = 0.f;
 }
 
 //-----------------------------------------------------------------------------
@@ -8342,8 +8278,6 @@ int CTFPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 {
 	CTakeDamageInfo info = inputInfo;
 
-	bool bIsObject = info.GetInflictor() && info.GetInflictor()->IsBaseObject(); 
-
 // need to check this now, before dying
 	bool bHadBallBeforeDamage = false;
 	if ( TFGameRules() && TFGameRules()->IsPasstimeMode() )
@@ -9315,91 +9249,6 @@ int CTFPlayer::OnTakeDamage( const CTakeDamageInfo &inputInfo )
 		EconEntity_OnOwnerKillEaterEvent_Batched( pTFWeapon, pTFAttacker, this, kKillEaterEvent_PlayersHit, 1 );
 	}
 
-	if ( bTookDamage && m_Shared.InCond( TF_COND_GAS ) )
-	{
-		CTFPlayer *pTFGasTosser = dynamic_cast< CTFPlayer* >( m_Shared.GetConditionProvider( TF_COND_GAS ) );
-		if ( pTFGasTosser )
-		{
-			IGameEvent *event = gameeventmanager->CreateEvent( "gas_doused_player_ignited" );
-			if ( event )
-			{
-				event->SetInt( "igniter", pAttacker ? pAttacker->entindex() : 0 );
-				event->SetInt( "douser", pTFGasTosser->entindex() );
-				event->SetInt( "victim", entindex() );
-				gameeventmanager->FireEvent( event );
-			}
-		}
-
-		if ( IsPlayerClass( TF_CLASS_PYRO ) )
-		{
-			m_Shared.AddCond( TF_COND_BURNING_PYRO, tf_afterburn_max_duration );
-		}
-
-		CTFWeaponBase *pGasCan = nullptr;
-		if ( pTFGasTosser )
-		{
-			pGasCan = dynamic_cast<CTFWeaponBase*>( pTFGasTosser->GetEntityForLoadoutSlot( LOADOUT_POSITION_SECONDARY ) );
-		}
-
-		m_Shared.Burn( pTFGasTosser ? pTFGasTosser : this, ( pGasCan && pGasCan->GetWeaponID() == TF_WEAPON_JAR_GAS ) ? pGasCan : NULL, tf_afterburn_max_duration );
-		m_Shared.RemoveCond( TF_COND_GAS );
-
-		// Explode?
-		if ( pTFGasTosser && pGasCan )
-		{
-			int iExplodeOnIgnite = 0;
-			CALL_ATTRIB_HOOK_INT_ON_OTHER( pGasCan, iExplodeOnIgnite, explode_on_ignite );
-			if ( iExplodeOnIgnite )
-			{
-				bool bExploded = false;
-				float flRadius = 200.f;
-
-				CBaseEntity	*pObjects[32];
-				int nCount = UTIL_EntitiesInSphere( pObjects, ARRAYSIZE( pObjects ), GetAbsOrigin(), flRadius, FL_CLIENT );
-				for ( int i = 0; i < nCount; i++ )
-				{
-					if ( !pObjects[i] )
-						continue;
-
-					if ( !pObjects[i]->IsAlive() )
-						continue;
-
-// 						if ( pObjects[i] == this )
-// 							continue;
-
-					if ( pAttacker->InSameTeam( pObjects[i] ) )
-						continue;
-
-					CTFPlayer *pTFBlastVictim = ToTFPlayer( pObjects[i] );
-
-					if ( pTFBlastVictim->m_Shared.InCond( TF_COND_PHASE ) || pTFBlastVictim->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
-						continue;
-
-					if ( pTFBlastVictim->m_Shared.IsInvulnerable() )
-						continue;
-
-					if ( pTFBlastVictim->m_Shared.InCond( TF_COND_BLEEDING ) )
-					{
-						if ( pTFBlastVictim->m_Shared.GetConditionProvider( TF_COND_BLEEDING ) == pTFGasTosser )
-							continue;
-					}
-							
-					if ( !FVisible( pTFBlastVictim, MASK_OPAQUE ) )
-						continue;
-
-					pTFBlastVictim->m_Shared.MakeBleed( pTFGasTosser, pGasCan, 0.1f, 350.f, false, TF_DMG_CUSTOM_BURNING );
-					DispatchParticleEffect( "dragons_fury_effect", pTFBlastVictim->GetAbsOrigin(), vec3_angle );
-					bExploded = true;
-				}
-
-				if ( bExploded )
-				{
-					EmitSound( "Weapon_Grenade_Pipebomb.Explode" );
-				}
-			}
-		}
-	}
-
 	// bHadBallBeforeDamage will always be false in non-passtime modes
 	if ( bTookDamage && bHadBallBeforeDamage )
 	{
@@ -9460,14 +9309,6 @@ void CTFPlayer::OnDealtDamage( CBaseCombatCharacter *pVictim, const CTakeDamageI
 		// Only do this if we charge on damage
 		if ( chargetype != ATTRIBUTE_METER_TYPE_DAMAGE && chargetype != ATTRIBUTE_METER_TYPE_COMBO )
 			continue;
-
-		// Don't allow "explode on ignite" damage to refill the gas can's meter
-		if ( IsPlayerClass( TF_CLASS_PYRO ) && eLoadoutPosition == LOADOUT_POSITION_SECONDARY && TFGameRules()->GameModeUsesUpgrades() )
-		{
-			CTFWeaponBase *pTFWeapon = dynamic_cast< CTFWeaponBase* >( info.GetWeapon() );
-			if ( pTFWeapon && pTFWeapon->GetWeaponID() == TF_WEAPON_JAR_GAS && info.GetDamageCustom() == TF_DMG_CUSTOM_BURNING )
-				continue;
-		}
 
 		IHasGenericMeter *pGenericMeterUser = dynamic_cast< IHasGenericMeter* >( GetEntityForLoadoutSlot( eLoadoutPosition, true ) );
 		if ( !pGenericMeterUser || !pGenericMeterUser->ShouldUpdateMeter() )

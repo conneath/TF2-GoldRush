@@ -439,7 +439,7 @@ class CTFLogoPanel : public vgui::Panel
 public:
 	CTFLogoPanel( Panel *pParent, const char *pszPanelname );
 
-	virtual void Paint() OVERRIDE;
+	virtual void Paint() OVERRIDE = 0;
 
 protected:
 	CPanelAnimationVarAliasType( float, m_flRadius, "radius", "5", "float" );

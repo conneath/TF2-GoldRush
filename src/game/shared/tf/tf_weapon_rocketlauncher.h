@@ -72,8 +72,6 @@ public:
 	virtual void CreateMuzzleFlashEffects( C_BaseEntity *pAttachEnt, int nIndex );
 #endif
 
-	virtual bool	CanInspect() const OVERRIDE;
-
 private:
 	float	m_flShowReloadHintAt;
 

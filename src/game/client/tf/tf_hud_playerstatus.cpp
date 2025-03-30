@@ -474,7 +474,6 @@ CTFHudPlayerHealth::CTFHudPlayerHealth( Panel *parent, const char *name ) : Edit
 	m_pMarkedForDeathImage = new ImagePanel( this, "PlayerStatusMarkedForDeathImage" );
 	m_pMarkedForDeathImageSilent = new ImagePanel( this, "PlayerStatusMarkedForDeathSilentImage" );
 	m_pMilkImage = new ImagePanel( this, "PlayerStatusMilkImage" );
-	m_pGasImage = new ImagePanel( this, "PlayerStatusGasImage" );
 	m_pSlowedImage = new ImagePanel( this, "PlayerStatusSlowed" );
 
 	m_pWheelOfDoomImage = new ImagePanel( this, "PlayerStatus_WheelOfDoom" );
@@ -497,19 +496,6 @@ CTFHudPlayerHealth::CTFHudPlayerHealth( Panel *parent, const char *name ) : Edit
 	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_OFFENSEBUFF, BUFF_CLASS_SOLDIER_OFFENSE, new ImagePanel( this, "PlayerStatus_SoldierOffenseBuff" ),						"../Effects/soldier_buff_offense_blue",		"../Effects/soldier_buff_offense_red" ) );
 	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_DEFENSEBUFF, BUFF_CLASS_SOLDIER_DEFENSE, new ImagePanel( this, "PlayerStatus_SoldierDefenseBuff" ),						"../Effects/soldier_buff_defense_blue",		"../Effects/soldier_buff_defense_red" ) );
 	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_REGENONDAMAGEBUFF, BUFF_CLASS_SOLDIER_HEALTHONHIT, new ImagePanel( this, "PlayerStatus_SoldierHealOnHitBuff" ),			"../Effects/soldier_buff_healonhit_blue",	"../Effects/soldier_buff_healonhit_red" ) );
-	// Powerup Rune status
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_STRENGTH, RUNE_CLASS_STRENGTH, new ImagePanel( this, "PlayerStatus_RuneStrength" ), "../Effects/powerup_strength_hud", "../Effects/powerup_strength_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_HASTE, RUNE_CLASS_HASTE, new ImagePanel( this, "PlayerStatus_RuneHaste" ), "../Effects/powerup_haste_hud", "../Effects/powerup_haste_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_REGEN, RUNE_CLASS_REGEN, new ImagePanel( this, "PlayerStatus_RuneRegen" ), "../Effects/powerup_regen_hud", "../Effects/powerup_regen_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_RESIST, RUNE_CLASS_RESIST, new ImagePanel( this, "PlayerStatus_RuneResist" ), "../Effects/powerup_resist_hud", "../Effects/powerup_resist_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_VAMPIRE, RUNE_CLASS_VAMPIRE, new ImagePanel( this, "PlayerStatus_RuneVampire" ), "../Effects/powerup_vampire_hud", "../Effects/powerup_vampire_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_REFLECT, RUNE_CLASS_REFLECT, new ImagePanel( this, "PlayerStatus_RuneReflect" ), "../Effects/powerup_reflect_hud", "../Effects/powerup_reflect_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_PRECISION, RUNE_CLASS_PRECISION, new ImagePanel( this, "PlayerStatus_RunePrecision" ), "../Effects/powerup_precision_hud", "../Effects/powerup_precision_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_AGILITY, RUNE_CLASS_AGILITY, new ImagePanel( this, "PlayerStatus_RuneAgility" ), "../Effects/powerup_agility_hud", "../Effects/powerup_agility_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_KNOCKOUT, RUNE_CLASS_KNOCKOUT, new ImagePanel( this, "PlayerStatus_RuneKnockout" ), "../Effects/powerup_knockout_hud", "../Effects/powerup_knockout_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_KING, RUNE_CLASS_KING, new ImagePanel( this, "PlayerStatus_RuneKing" ), "../Effects/powerup_king_hud", "../Effects/powerup_king_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_PLAGUE, RUNE_CLASS_PLAGUE, new ImagePanel( this, "PlayerStatus_RunePlague" ), "../Effects/powerup_plague_hud", "../Effects/powerup_plague_hud" ) );
-	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_RUNE_SUPERNOVA, RUNE_CLASS_SUPERNOVA, new ImagePanel( this, "PlayerStatus_RuneSupernova" ), "../Effects/powerup_supernova_hud", "../Effects/powerup_supernova_hud" ) );
 
 	// Parachute
 	m_vecBuffInfo.AddToTail( new CTFBuffInfo( TF_COND_PARACHUTE_ACTIVE, BUFF_CLASS_PARACHUTE, new ImagePanel( this, "PlayerStatus_Parachute" ), "../HUD/hud_parachute_active", "../HUD/hud_parachute_active" ) );
@@ -813,7 +799,6 @@ void CTFHudPlayerHealth::OnThink()
 			m_pBleedImage->SetVisible( false );
 			m_pHookBleedImage->SetVisible( false );
 			m_pMilkImage->SetVisible( false );
-			m_pGasImage->SetVisible( false );
 			m_pMarkedForDeathImage->SetVisible( false );
 			m_pMarkedForDeathImageSilent->SetVisible( false );
 			m_pSlowedImage->SetVisible( false );
@@ -827,7 +812,6 @@ void CTFHudPlayerHealth::OnThink()
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_MARKEDFORDEATH_SILENT,	m_pMarkedForDeathImageSilent,	nXOffset,	Color( 125 - color_fade, 255 - color_fade, 255 - color_fade, 255 ) );
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_PASSTIME_PENALTY_DEBUFF,	m_pMarkedForDeathImageSilent,	nXOffset,	Color( 125 - color_fade, 255 - color_fade, 255 - color_fade, 255 ) );
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_STUNNED,					m_pSlowedImage,					nXOffset,	Color( color_fade, color_fade, 0, 255 ) );
-			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_GAS,						m_pGasImage,					nXOffset,	Color( color_fade, color_fade, color_fade, 255 ) );
 			
 			UpdateHalloweenStatus();
 		}

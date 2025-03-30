@@ -31,6 +31,7 @@
 #include "tf_mapinfo.h"
 #include "tf_dropped_weapon.h"
 #include "tf_weapon_passtime_gun.h"
+#include "tf_weapon_rocketpack.h"
 #include <functional>
 
 // Client specific.
@@ -227,7 +228,6 @@ extern ConVar mp_developer;
 #define TF_SCREEN_OVERLAY_MATERIAL_BLEED			"effects/bleed_overlay" 
 #define TF_SCREEN_OVERLAY_MATERIAL_STEALTH			"effects/stealth_overlay"
 #define TF_SCREEN_OVERLAY_MATERIAL_SWIMMING_CURSE	"effects/jarate_overlay" 
-#define TF_SCREEN_OVERLAY_MATERIAL_GAS				"effects/gas_overlay" 
 
 #define TF_SCREEN_OVERLAY_MATERIAL_PHASE	"effects/dodge_overlay"
 
@@ -470,7 +470,10 @@ BEGIN_PREDICTION_DATA_NO_BASE( CTFPlayerShared )
 	DEFINE_PRED_FIELD( m_bHasPasstimeBall, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_bIsTargetedForPasstimePass, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ), // does this belong here?
 	DEFINE_PRED_FIELD( m_askForBallTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_flHolsterAnimTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_ARRAY( m_flItemChargeMeter, FIELD_FLOAT, LAST_LOADOUT_SLOT_WITH_CHARGE_METER, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_iStunIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
+	DEFINE_PRED_FIELD( m_bScattergunJump, FIELD_BOOLEAN, 0 ),
 END_PREDICTION_DATA()
 
 // Server specific.
@@ -762,6 +765,8 @@ CTFPlayerShared::CTFPlayerShared()
 	m_flPrevInvisibility = 0.f;
 	m_flTmpDamageBonusAmount = 1.0f;
 
+	m_bScattergunJump = false;
+
 	m_bFeignDeathReady = false;
 
 	m_fCloakConsumeRate = tf_spy_cloak_consume_rate.GetFloat();
@@ -978,7 +983,6 @@ void CTFPlayerShared::Spawn( void )
 	SetRevengeCrits( 0 );
 
 	m_PlayerStuns.RemoveAll();
-	m_iStunIndex = -1;
 
 	m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_NONE;
 	m_bHasPasstimeBall = false;
@@ -987,6 +991,7 @@ void CTFPlayerShared::Spawn( void )
 #else
 	m_bSyncingConditions = false;
 #endif
+	m_iStunIndex = -1;
 	m_bKingRuneBuffActive = false;
 
 	// Reset our assist here incase something happens before we get killed
@@ -1248,7 +1253,6 @@ CBaseEntity *CTFPlayerShared::GetConditionAssistFromVictim( void )
 		TF_COND_URINE,
 		TF_COND_MAD_MILK,
 		TF_COND_MARKEDFORDEATH,
-		TF_COND_GAS,
 	};
 
 	CBaseEntity *pProvider = NULL;
@@ -1797,10 +1801,6 @@ void CTFPlayerShared::OnConditionAdded( ETFCond eCond )
 		OnAddCompetitiveLoser();
 		break;
 
-	case TF_COND_GAS:
-		OnAddCondGas();
-		break;
-
 	case TF_COND_ROCKETPACK:
 		OnAddRocketPack();
 		break;
@@ -2113,16 +2113,8 @@ void CTFPlayerShared::OnConditionRemoved( ETFCond eCond )
 		OnRemoveCompetitiveLoser();
 		break;
 
-	case TF_COND_GAS:
-		OnRemoveCondGas();
-		break;
-
 	case TF_COND_ROCKETPACK:
 		OnRemoveRocketPack();
-		break;
-
-	case TF_COND_BURNING_PYRO:
-		OnRemoveBurningPyro();
 		break;
 
 	case TF_COND_HALLOWEEN_HELL_HEAL:
@@ -2775,7 +2767,7 @@ void CTFPlayerShared::ConditionGameRulesThink( void )
 		else if ( gpGlobals->curtime >= m_flFlameBurnTime )
 		{
 			// Burn the player (if not pyro, who does not take persistent burning damage)
-			if ( ( TF_CLASS_PYRO != m_pOuter->GetPlayerClass()->GetClassIndex() ) || InCond( TF_COND_BURNING_PYRO ) )
+			if ( TF_CLASS_PYRO != m_pOuter->GetPlayerClass()->GetClassIndex() )
 			{
 				float flBurnDamage = TF_BURNING_DMG;
 				int nKillType = TF_DMG_CUSTOM_BURNING;
@@ -2888,12 +2880,6 @@ void CTFPlayerShared::ConditionGameRulesThink( void )
 			// If we're underwater, wash off the Mad Milk.
 			RemoveCond( TF_COND_MAD_MILK );
 		}
-
-		if ( InCond( TF_COND_GAS ) )
-		{
-			// If we're underwater, wash off the Gas.
-			RemoveCond( TF_COND_GAS );
-		}
 	}
 
 	if ( !InCond( TF_COND_DISGUISED ) )
@@ -2990,9 +2976,48 @@ void CTFPlayerShared::ConditionThink( void )
 
 	VehicleThink();
 
-	if ( m_pOuter->GetFlags() & FL_ONGROUND && InCond( TF_COND_PARACHUTE_ACTIVE ) )
+	if ( m_pOuter->GetFlags() & FL_ONGROUND )
 	{
-		RemoveCond( TF_COND_PARACHUTE_ACTIVE );
+		// Airborne conditions end on ground contact
+		RemoveCond( TF_COND_KNOCKED_INTO_AIR );
+		RemoveCond( TF_COND_AIR_CURRENT );
+
+		if ( InCond( TF_COND_PARACHUTE_ACTIVE ) )
+		{
+			RemoveCond( TF_COND_PARACHUTE_ACTIVE );
+		}
+
+		if ( InCond( TF_COND_ROCKETPACK ) )
+		{
+			// Make sure we're still not dealing with launch, where it's possible
+			// to hit your head and fall to the ground before the second stage.
+			CTFWeaponBase *pRocketPack = m_pOuter->Weapon_OwnsThisID( TF_WEAPON_ROCKETPACK );
+			if ( pRocketPack )
+			{
+				if ( gpGlobals->curtime > ( static_cast< CTFRocketPack* >( pRocketPack )->GetRefireTime() ) )
+				{
+#ifdef CLIENT_DLL
+					if ( prediction->IsFirstTimePredicted() )
+#endif
+					{
+						CPASAttenuationFilter filter( m_pOuter );
+						filter.UsePredictionRules();
+						m_pOuter->EmitSound( filter, m_pOuter->entindex(), "Weapon_RocketPack.BoostersShutdown" );
+						m_pOuter->EmitSound( filter, m_pOuter->entindex(), "Weapon_RocketPack.Land" );
+					}
+					RemoveCond( TF_COND_ROCKETPACK );
+
+#ifdef GAME_DLL
+					IGameEvent *pEvent = gameeventmanager->CreateEvent( "rocketpack_landed" );
+					if ( pEvent )
+					{
+						pEvent->SetInt( "userid", m_pOuter->GetUserID() );
+						gameeventmanager->FireEvent( pEvent );
+					}
+#endif
+				}
+			}
+		}
 	}
 
 	// See if we should be pulsing our radius heal
@@ -3316,11 +3341,6 @@ void CTFPlayerShared::OnAddInvulnerable( void )
 	if ( InCond( TF_COND_MAD_MILK ) )
 	{
 		RemoveCond( TF_COND_MAD_MILK );
-	}
-
-	if ( InCond( TF_COND_GAS ) )
-	{
-		RemoveCond( TF_COND_GAS );
 	}
 
 	if ( InCond( TF_COND_PLAGUE ) )
@@ -4413,19 +4433,6 @@ void CTFPlayerShared::OnAddRocketPack( void )
 //-----------------------------------------------------------------------------
 void CTFPlayerShared::OnRemoveRocketPack( void )
 {
-}
-
-//-----------------------------------------------------------------------------
-// Purpose:
-//-----------------------------------------------------------------------------
-void CTFPlayerShared::OnRemoveBurningPyro( void )
-{
-#ifdef GAME_DLL
-	if ( m_pOuter->IsPlayerClass( TF_CLASS_PYRO) && InCond( TF_COND_BURNING ) )
-	{
-		RemoveCond( TF_COND_BURNING );
-	}
-#endif // GAME_DLL
 }
 
 //-----------------------------------------------------------------------------
@@ -6285,10 +6292,6 @@ void CTFPlayerShared::Burn( CTFPlayer *pAttacker, CTFWeaponBase *pWeapon, float 
 
 	// pyros don't burn persistently or take persistent burning damage, but we show brief burn effect so attacker can tell they hit
 	bool bVictimIsImmunePyro = ( TF_CLASS_PYRO ==  m_pOuter->GetPlayerClass()->GetClassIndex() );
-	if ( bVictimIsImmunePyro )
-	{
-		bVictimIsImmunePyro = !InCond( TF_COND_BURNING_PYRO );
-	}
 
 #ifdef DEBUG
 	static float s_flStartAfterburnTime = 0.f;
@@ -7006,6 +7009,8 @@ void CTFPlayerShared::OnRemoveStunned( void )
 	m_iStunFlags = 0;
 	m_hStunner = NULL;
 
+	m_iStunIndex = -1;
+
 #ifdef CLIENT_DLL
 	if ( m_pOuter->m_pStunnedEffect )
 	{
@@ -7015,7 +7020,6 @@ void CTFPlayerShared::OnRemoveStunned( void )
 		m_pOuter->m_pStunnedEffect = NULL;
 	}
 #else
-	m_iStunIndex = -1;
 	m_PlayerStuns.RemoveAll();
 #endif
 
@@ -7258,57 +7262,6 @@ void CTFPlayerShared::OnRemoveSodaPopperHype( void )
 	if ( m_pOuter->IsLocalPlayer() )
 	{
 		m_pOuter->EmitSound( "DisciplineDevice.PowerDown" );
-	}
-#endif // CLIENT_DLL
-}
-
-//-----------------------------------------------------------------------------
-// Soda Popper Condition
-//-----------------------------------------------------------------------------
-void CTFPlayerShared::OnAddCondGas( void )
-{
-#ifdef CLIENT_DLL
-	// don't need to add the effect if they're already burning
-	if ( !InCond( TF_COND_BURNING ) && !m_pOuter->m_pGasEffect )
-	{
-		// You'll only have the drip effect from the opposing team
-		m_pOuter->m_pGasEffect = m_pOuter->ParticleProp()->Create( ( m_pOuter->GetTeamNumber() == TF_TEAM_BLUE ) ? "gas_can_drips_red" : "gas_can_drips_blue", PATTACH_ABSORIGIN_FOLLOW );
-	}
-
-	if ( m_pOuter->m_pGasEffect )
-	{
-		m_pOuter->ParticleProp()->AddControlPoint( m_pOuter->m_pGasEffect, 1, m_pOuter, PATTACH_ABSORIGIN_FOLLOW );
-	}
-
-	if ( m_pOuter->IsLocalPlayer() )
-	{
-		IMaterial *pMaterial = materials->FindMaterial( TF_SCREEN_OVERLAY_MATERIAL_GAS, TEXTURE_GROUP_CLIENT_EFFECTS, false );
-		if ( !IsErrorMaterial( pMaterial ) )
-		{
-			view->SetScreenOverlayMaterial( pMaterial );
-		}
-	}
-
-#endif // CLIENT_DLL
-}
-//-----------------------------------------------------------------------------
-void CTFPlayerShared::OnRemoveCondGas( void )
-{
-#ifdef CLIENT_DLL
-	if ( m_pOuter->m_pGasEffect )
-	{
-		m_pOuter->ParticleProp()->StopEmission( m_pOuter->m_pGasEffect );
-		m_pOuter->m_pGasEffect = NULL;
-	}
-
-	if ( m_pOuter->IsLocalPlayer() )
-	{
-		// only remove the overlay if it is urine
-		IMaterial *pMaterial = view->GetScreenOverlayMaterial();
-		if ( pMaterial && FStrEq( pMaterial->GetName(), TF_SCREEN_OVERLAY_MATERIAL_GAS ) )
-		{
-			view->SetScreenOverlayMaterial( NULL );
-		}
 	}
 #endif // CLIENT_DLL
 }
@@ -9286,15 +9239,16 @@ bool CTFPlayerShared::AddToSpyCloakMeter( float val, bool bForce )
 
 #endif
 
-#ifdef GAME_DLL
 //-----------------------------------------------------------------------------
 // Purpose: Stun & Snare Application
 //-----------------------------------------------------------------------------
 void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iStunFlags, CTFPlayer* pAttacker )
 {
+#ifdef GAME_DLL
 	// Insanity prevention
 	if ( ( m_PlayerStuns.Count() + 1 ) >= 250 )
 		return;
+#endif
 
 	if ( InCond( TF_COND_PHASE ) || InCond( TF_COND_PASSTIME_INTERCEPTION ) )
 		return;
@@ -9305,15 +9259,19 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 	if ( InCond( TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED ) && !InCond( TF_COND_MVM_BOT_STUN_RADIOWAVE ) )
 		return;
 
+#ifdef GAME_DLL
 	if ( pAttacker && TFGameRules() && TFGameRules()->IsTruceActive() && pAttacker->IsTruceValidForEnt() )
 	{
 		if ( ( pAttacker->GetTeamNumber() == TF_TEAM_RED ) || ( pAttacker->GetTeamNumber() == TF_TEAM_BLUE ) )
 			return;
 	}
+#endif
 
 	float flRemapAmount = RemapValClamped( flReductionAmount, 0.0, 1.0, 0, 255 );
 
+#ifdef GAME_DLL
 	int iOldStunFlags = GetStunFlags();
+#endif
 
 	// Already stunned
 	bool bStomp = false;
@@ -9336,10 +9294,13 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 	}
 	else if ( GetActiveStunInfo() )
 	{
+#ifdef GAME_DLL
 		// Something yanked our TF_COND_STUNNED in an unexpected way
 		if ( !HushAsserts() )
 			Assert( !"Something yanked out TF_COND_STUNNED." );
 		m_PlayerStuns.RemoveAll();
+#endif
+		m_iStunIndex = -1;
 		return;
 	}
 
@@ -9361,7 +9322,16 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 		// This can happen when stuns use TF_STUN_CONTROLS or TF_STUN_LOSER_STATE.
 		float flOldStun = GetActiveStunInfo() ? GetActiveStunInfo()->flStunAmount : 0.f;
 
+#ifdef GAME_DLL
 		m_iStunIndex = m_PlayerStuns.AddToTail( stunEvent );
+#else
+		m_iStunIndex = 0;
+
+		if ( prediction->IsFirstTimePredicted() )
+		{
+			m_ActiveStunInfo = stunEvent;
+		}
+#endif
 
 		if ( flOldStun > flRemapAmount )
 		{
@@ -9371,10 +9341,18 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 	else
 	{
 		// Done for now
+#ifdef GAME_DLL
 		m_PlayerStuns.AddToTail( stunEvent );
+#else
+		if ( prediction->IsFirstTimePredicted() )
+		{
+			m_ActiveStunInfo = stunEvent;
+		}
+#endif
 		return;
 	}
 
+#ifdef GAME_DLL
 	// Add in extra time when TF_STUN_CONTROLS
 	if ( GetActiveStunInfo()->iStunFlags & TF_STUN_CONTROLS )
 	{
@@ -9428,10 +9406,10 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 		m_pOuter->ClearExpression();
 		m_pOuter->ClearWeaponFireScene();
 	}
+#endif
 
 	AddCond( TF_COND_STUNNED, -1.f, pAttacker );
 }
-#endif // GAME_DLL
 
 //-----------------------------------------------------------------------------
 // Purpose: Returns the intensity of the current stun effect, if we have the type of stun indicated.
@@ -10662,15 +10640,6 @@ void CTFPlayer::SetItem( CTFItem *pItem )
 	m_hItem = pItem;
 
 #ifndef CLIENT_DLL
-	if ( pItem )
-	{
-		AddGlowEffect();
-	}
-	else
-	{
-		RemoveGlowEffect();
-	}
-
 	if ( pItem && pItem->GetItemID() == TF_ITEM_CAPTURE_FLAG )
 	{
 		RemoveInvisibility();
@@ -11069,14 +11038,6 @@ void CTFPlayer::ItemPostFrame()
 			}
 		}
 	}
-
-#ifdef GAME_DLL
-	CTFWeaponBase *pActiveWeapon = GetActiveTFWeapon();
-	if ( pActiveWeapon )
-	{
-		pActiveWeapon->HandleInspect();
-	}
-#endif // GAME_DLL
 
 	BaseClass::ItemPostFrame();
 
@@ -14030,15 +13991,6 @@ CTFDroppedWeapon* CTFPlayer::GetDroppedWeaponInRange()
 		return NULL;
 
 	return pDroppedWeapon;
-}
-
-
-//-----------------------------------------------------------------------------
-// Purpose: Returns true if player is inspecting
-//-----------------------------------------------------------------------------
-bool CTFPlayer::IsInspecting() const
-{
-	return m_flInspectTime != 0.f && gpGlobals->curtime - m_flInspectTime > 0.2f;
 }
 
 

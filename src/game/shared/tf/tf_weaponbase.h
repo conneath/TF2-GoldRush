@@ -756,25 +756,10 @@ public:
 	CNetworkHandle( CTFWearable, m_hExtraWearableViewModel );
 
 	CNetworkVar( float, m_flObservedCritChance );
-
-	virtual bool CanInspect() const { return true; }
-	void HandleInspect();
 	
 	virtual void HookAttributes( void ) {};
 	virtual void OnUpgraded( void ) { HookAttributes(); }
 	virtual float GetNextSecondaryAttackDelay( void ) OVERRIDE;
-
-	enum TFWeaponInspectStage
-	{
-		INSPECT_INVALID = -1,
-		INSPECT_START,
-		INSPECT_IDLE,
-		INSPECT_END,
-
-		INSPECT_STAGE_COUNT
-	};
-	TFWeaponInspectStage GetInspectStage() const { return (TFWeaponInspectStage)m_nInspectStage.Get(); }
-	float GetInspectAnimEndTime() const { return m_flInspectAnimEndTime; }
 
 	virtual bool UsesCenterFireProjectile( void ) const OVERRIDE;
 
@@ -785,12 +770,6 @@ private:
 
 	CNetworkVar( int,	m_nKillComboClass );
 	CNetworkVar( int,	m_nKillComboCount );
-	
-	Activity GetInspectActivity( TFWeaponInspectStage inspectStage );
-	bool IsInspectActivity( int iActivity );
-	CNetworkVar( float, m_flInspectAnimEndTime );
-	CNetworkVar( int, m_nInspectStage );
-	bool m_bInspecting;
 
 	friend class CTFDroppedWeapon;
 

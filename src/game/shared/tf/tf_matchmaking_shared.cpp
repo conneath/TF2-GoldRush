@@ -245,47 +245,6 @@ void CCasualCriteriaHelper::Clear( void )
 	m_mapsBits.ClearAll();
 }
 
-//
-// MvM Missions
-//
-
-CMvMMissionSet::CMvMMissionSet() { Clear(); }
-CMvMMissionSet::CMvMMissionSet( const CMvMMissionSet &x ) { m_bits = x.m_bits; }
-CMvMMissionSet::~CMvMMissionSet() {}
-void CMvMMissionSet::operator=( const CMvMMissionSet &x ) { m_bits = x.m_bits; }
-void CMvMMissionSet::Clear() { m_bits = 0; }
-bool CMvMMissionSet::operator==( const CMvMMissionSet &x ) const { return m_bits == x.m_bits; }
-
-void CMvMMissionSet::SetMissionBySchemaIndex( int idxMission, bool flag )
-{
-	Assert( idxMission >= 0 && idxMission < GetItemSchema()->GetMvmMissions().Count() );
-	uint64 mask = ( (uint64)1 << (unsigned)idxMission );
-	if ( flag )
-		m_bits |= mask;
-	else
-		m_bits &= ~mask;
-}
-
-bool CMvMMissionSet::GetMissionBySchemaIndex( int idxMission ) const
-{
-	return false;
-}
-
-void CMvMMissionSet::Intersect( const CMvMMissionSet &x )
-{
-	m_bits &= x.m_bits;
-}
-
-bool CMvMMissionSet::HasIntersection( const CMvMMissionSet &x ) const
-{
-	return ( m_bits & x.m_bits ) != 0;
-}
-
-bool CMvMMissionSet::IsEmpty() const
-{
-	return ( m_bits == 0 );
-}
-
 ETFMatchGroup ETFMatchGroup_FuzzyParse( const char *pArg )
 {
 	// Numeric?
