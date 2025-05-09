@@ -9665,6 +9665,7 @@
 			"static_attrs"
 			{
 				"min_viewmodel_offset"					"10 0 -6"
+				"no double jump"				"1"
 			}
 			"attributes"
 			{
@@ -9672,11 +9673,6 @@
 				{
 					"attribute_class"	"set_weapon_mode"
 					"value"	"1"
-				}
-				"max health additive penalty"
-				{
-					"attribute_class"	"add_maxhealth"
-					"value" "-15"
 				}
 				"special taunt"
 				{
