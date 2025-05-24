@@ -209,13 +209,6 @@ enum TFStunAnimState_t
 	STUN_ANIM_END
 };
 
-enum TFPassTimeThrowAnimState_t
-{
-	PASSTIME_THROW_ANIM_NONE = 0,
-	PASSTIME_THROW_ANIM_LOOP,
-	PASSTIME_THROW_ANIM_END
-};
-
 //=============================================================================
 //
 // Shared player class.
@@ -762,7 +755,6 @@ private:
 	void OnAddMeleeOnly( void );
 	void OnAddSwimmingCurse( void );
 	void OnAddHalloweenKartCage( void );
-	void OnAddPasstimeInterception( void );
 	void OnAddInPurgatory( void );
 	void OnAddCompetitiveWinner( void );
 	void OnAddCompetitiveLoser( void );
@@ -820,7 +812,6 @@ private:
 	void OnRemoveMeleeOnly( void );
 	void OnRemoveSwimmingCurse( void );
 	void OnRemoveHalloweenKartCage( void );
-	void OnRemovePasstimeInterception( void );
 	void OnRemoveInPurgatory( void );
 	void OnRemoveCompetitiveWinner( void );
 	void OnRemoveCompetitiveLoser( void );
@@ -1171,27 +1162,7 @@ public:
 
 	CNetworkVar( bool, m_bArenaFirstBloodBoost );
 
-// passtime
-public:
-	void SetHasPasstimeBall( bool has ) { m_bHasPasstimeBall = has; }
-	bool HasPasstimeBall() const { return m_bHasPasstimeBall; }
-	
-	bool IsTargetedForPasstimePass() const { return m_bIsTargetedForPasstimePass; }
-	void SetPasstimePassTarget( CTFPlayer *ent );
-	CTFPlayer *GetPasstimePassTarget() const;
-	
-	void SetAskForBallTime( float time ) { m_askForBallTime = time; }
-	float AskForBallTime() const { return m_askForBallTime; }
-
-	float m_flPasstimeThrowAnimStateTime;
-	TFPassTimeThrowAnimState_t	m_iPasstimeThrowAnimState;
-
 private:
-	CNetworkVar( bool, m_bHasPasstimeBall );
-	CNetworkVar( bool, m_bIsTargetedForPasstimePass );
-	CNetworkHandle( CTFPlayer, m_hPasstimePassTarget );
-	CNetworkVar( float, m_askForBallTime );
-
 	CNetworkVar( float, m_flHolsterAnimTime );
 	CNetworkHandle( CBaseCombatWeapon, m_hSwitchTo );
 };

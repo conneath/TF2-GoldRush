@@ -1081,7 +1081,7 @@ void CTFSniperRifle::ExplosiveHeadShot( CTFPlayer *pAttacker, CTFPlayer *pVictim
 		if ( !pTFPlayer )
 			continue;
 
-		if ( pTFPlayer->m_Shared.InCond( TF_COND_PHASE ) || pTFPlayer->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+		if ( pTFPlayer->m_Shared.InCond( TF_COND_PHASE ) )
 			continue;
 
 		if ( pTFPlayer->m_Shared.IsInvulnerable() )

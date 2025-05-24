@@ -23,7 +23,6 @@
 #include "nav_mesh/tf_nav_mesh.h"
 #include "nav_pathfind.h"
 #include "tf_weapon_knife.h"
-#include "tf_logic_robot_destruction.h"
 #include "tf_target_dummy.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
@@ -1124,13 +1123,6 @@ bool CObjectSentrygun::ValidTargetBot( CBaseCombatCharacter *pBot, const Vector 
 	// Not across water boundary.
 	if ( ( GetWaterLevel() == 0 && pBot->GetWaterLevel() >= 3 ) || ( GetWaterLevel() == 3 && pBot->GetWaterLevel() <= 0 ) )
 		return false;
-
-	if ( TFGameRules() && TFGameRules()->IsPlayingRobotDestructionMode() )
-	{
-		CTFRobotDestruction_Robot *pRobot = dynamic_cast< CTFRobotDestruction_Robot* >( pBot );
-		if ( pRobot && pRobot->GetShieldedState() )
-			return false;
-	}
 
 	// Ray trace.
 	CBaseEntity *pBlocker;

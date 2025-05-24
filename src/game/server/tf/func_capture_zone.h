@@ -48,8 +48,6 @@ public:
 
 	int		UpdateTransmitState( void );
 
-	void	PlayerDestructionThink( void );
-
 private:
 
 	CNetworkVar( bool, m_bDisabled );		// Enabled/Disabled?

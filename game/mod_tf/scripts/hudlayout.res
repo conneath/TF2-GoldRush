@@ -1383,18 +1383,6 @@
 		"PaintBackgroundType"	"0" // rounded corners
 	}
 
-	CTFFlagCalloutPanel
-	{
-		"fieldName"		"CTFFlagCalloutPanel"
-		"visible" 		"0"
-		"enabled" 		"1"
-		"xpos"			"0"
-		"ypos"			"0"
-		"wide"	 		"40"
-		"tall"	 		"40"
-		"priority"		"40"
-	}
-
 	"HudMenuTauntSelection"
 	{
 		"fieldName" 	"HudMenuTauntSelection"

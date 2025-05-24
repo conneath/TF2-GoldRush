@@ -623,12 +623,6 @@ bool CTFInventoryManager::SlotContainsBaseItems( EEquipType_t eType, int iSlot )
 		return !IsQuestSlot( iSlot );
 	}
 
-	// Passtime gun
-	if ( (iSlot == LOADOUT_POSITION_UTILITY) && TFGameRules() && TFGameRules()->IsPasstimeMode() )
-	{
-		return true;
-	}
-
 	// Halloween spellbook
 	if ( iSlot == LOADOUT_POSITION_ACTION )
 	{

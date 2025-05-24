@@ -14,7 +14,6 @@
 #include "tf_player.h"
 #include "tf_gamestats.h"
 #include "ilagcompensationmanager.h"
-#include "tf_passtime_logic.h"
 // Client specific.
 #else
 #include "c_tf_gamestats.h"
@@ -610,13 +609,6 @@ bool CTFWeaponBaseMelee::OnSwingHit( trace_t &trace )
 		}
 
 #if !defined (CLIENT_DLL)
-
-		if ( pTargetPlayer->m_Shared.HasPasstimeBall() && g_pPasstimeLogic ) 
-		{
-			// This handles stealing the ball from teammates since there's no damage involved
-			// TODO find a better place for this
-			g_pPasstimeLogic->OnBallCarrierMeleeHit( pTargetPlayer, pPlayer );
-		}
 
 		if ( pPlayer->GetTeamNumber() != pTargetPlayer->GetTeamNumber() )
 		{

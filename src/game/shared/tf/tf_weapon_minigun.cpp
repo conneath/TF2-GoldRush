@@ -658,10 +658,6 @@ bool CTFMinigun::CanHolster( void ) const
 	CTFPlayer *pPlayer = GetTFPlayerOwner();
 	if( pPlayer )
 	{
-		// PASSTIME need to be able to immediately holster when you catch the ball
-		if ( pPlayer->m_Shared.HasPasstimeBall() )
-			return true;
-
 		// TF_COND_MELEE_ONLY need to be able to immediately holster and switch to melee weapon
 		if ( pPlayer->m_Shared.InCond( TF_COND_MELEE_ONLY ) )
 			return true;

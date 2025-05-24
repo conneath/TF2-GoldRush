@@ -10,7 +10,6 @@
 #include "tf_team.h"
 #include "tf_gamerules.h"
 #include "entity_capture_flag.h"
-#include "tf_logic_player_destruction.h"
 
 //=============================================================================
 //
@@ -89,135 +88,7 @@ void CCaptureZone::Activate( void )
 {
 	BaseClass::Activate();
 
-	if ( TFGameRules() && ( TFGameRules()->GetGameType() == TF_GAMETYPE_PD ) )
-	{
-		SetThink( &CCaptureZone::PlayerDestructionThink );
-		SetNextThink( gpGlobals->curtime + 0.1 );
-	}
-	else
-	{
-		SetThink( NULL );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCaptureZone::PlayerDestructionThink( void )
-{
-	SetNextThink( gpGlobals->curtime + 0.1 );
-
-	if ( !IsDisabled() )
-	{
-		bool bRedInZone = false;
-		bool bBlueInZone = false;
-
-		// nothing to do while no-one is touching us
-		if ( m_hTouchingEntities.Count() == 0 )
-			return;
-
-		// loop through the touching players to figure out the teams involved
-		for ( int i = 0; i < m_hTouchingEntities.Count(); i++ )
-		{
-			CBaseEntity *pEnt = m_hTouchingEntities[i];
-			if ( pEnt && pEnt->IsPlayer() )
-			{
-				CTFPlayer *pTFPlayer = ToTFPlayer( pEnt );
-				if ( pTFPlayer && pTFPlayer->IsAlive() )
-				{
-					bool bHidden = ( pTFPlayer->m_Shared.IsStealthed() || pTFPlayer->m_Shared.InCond( TF_COND_DISGUISED ) || pTFPlayer->m_Shared.InCond( TF_COND_DISGUISING ) );
-					if ( !bHidden )
-					{
-						if ( pTFPlayer->GetTeamNumber() == TF_TEAM_RED )
-						{
-							bRedInZone = true;
-						}
-						else if ( pTFPlayer->GetTeamNumber() == TF_TEAM_BLUE )
-						{
-							bBlueInZone = true;
-						}
-					}
-				}
-			}
-		}
-
-		// safety check, but this should have already been caught by the ( m_hTouchingEntities.Count() == 0 ) check above
-		if ( !bRedInZone && !bBlueInZone )
-			return;
-
-		if ( m_bShouldBlock )
-		{
-			// both teams are touching the zone and they block each other
-			if ( bRedInZone && bBlueInZone )
-				return;
-		}
-
-		CUtlVector< CTFPlayer* > playerVector;
-		CollectPlayers( &playerVector, TF_TEAM_RED );
-		CollectPlayers( &playerVector, TF_TEAM_BLUE, false, APPEND_PLAYERS );
-		float flCaptureDelay = m_flCaptureDelay	- ( m_flCaptureDelayOffset * playerVector.Count() );
-
-		// let's see if anyone has any player destruction points to capture
-		for ( int i = 0; i < m_hTouchingEntities.Count(); i++ )
-		{
-			CBaseEntity *pEnt = m_hTouchingEntities[i];
-			if ( pEnt && pEnt->IsPlayer() )
-			{
-				CTFPlayer *pTFPlayer = ToTFPlayer( pEnt );
-				if ( pTFPlayer && pTFPlayer->IsAlive() )
-				{
-					// does this capture point have a team number assigned?
-					if ( ( GetTeamNumber() != TEAM_UNASSIGNED ) && ( pTFPlayer->GetTeamNumber() != GetTeamNumber() ) )
-						continue;
-
-					if ( pTFPlayer->HasTheFlag() && pTFPlayer->CanScorePointForPD() )
-					{
-						CCaptureFlag *pFlag = dynamic_cast< CCaptureFlag* >( pTFPlayer->GetItem() );
-
-						int nPoints = pFlag->GetPointValue();
-						if ( nPoints > 0 )
-						{
-							// decrease the number of points
-							pFlag->AddPointValue( -1 );
-
-							// fire the output
-							switch ( pTFPlayer->GetTeamNumber() )
-							{
-							case TF_TEAM_RED:
-								m_OnCapTeam1_PD.FireOutput( this, this );
-								break;
-							case TF_TEAM_BLUE:
-								m_OnCapTeam2_PD.FireOutput( this, this );
-								break;
-							default:
-								break;
-							}
-
-							IGameEvent *event = gameeventmanager->CreateEvent( "special_score" );
-							if ( event )
-							{
-								event->SetInt( "player", pTFPlayer->entindex() );
-								gameeventmanager->FireEvent( event );
-							}
-						}
-
-						// remove this flag if this was the last point
-						if ( pFlag->GetPointValue() == 0 )
-						{
-							UTIL_Remove( pFlag );
-						}
-
-						if ( CTFPlayerDestructionLogic::GetPlayerDestructionLogic() )
-						{
-							CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->CalcTeamLeader( pTFPlayer->GetTeamNumber() );
-						}
-
-						pTFPlayer->SetNextScorePointForPD( gpGlobals->curtime + flCaptureDelay );
-					}
-				}
-			}
-		}
-	}
+	SetThink( NULL );
 }
 
 //-----------------------------------------------------------------------------
@@ -239,10 +110,6 @@ void CCaptureZone::ShimTouch( CBaseEntity *pOther )
 			CCaptureFlag *pFlag = dynamic_cast<CCaptureFlag*>( pPlayer->GetItem() );
 			if ( pFlag )
 			{
-				// we have a special think that will handle the player destruction flags
-				if ( pFlag->GetType() == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-					return;
-
 				if ( !pFlag->IsCaptured() )
 				{
 					// does this capture point have a team number assigned?
@@ -290,10 +157,6 @@ void CCaptureZone::Capture( CBaseEntity *pOther )
 		{
 			CCaptureFlag *pFlag = dynamic_cast< CCaptureFlag* >( pPlayer->GetItem() );
 			if ( !pFlag )
-				return;
-
-			// we have a special think that will handle the player destruction flags
-			if ( pFlag->GetType() == TF_FLAGTYPE_PLAYER_DESTRUCTION )
 				return;
 
 			if ( !pFlag->IsCaptured() )

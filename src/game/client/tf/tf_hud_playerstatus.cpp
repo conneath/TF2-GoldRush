@@ -28,7 +28,6 @@
 #include "tf_hud_playerstatus.h"
 #include "tf_gamerules.h"
 #include "tf_logic_halloween_2014.h"
-#include "tf_logic_player_destruction.h"
 
 #include "tf_wheel_of_doom.h"
 
@@ -342,14 +341,6 @@ void CTFHudPlayerClass::OnThink()
 		else
 		{
 			bShowCarryingWeaponPanel = false;
-		}
-
-		if ( CTFPlayerDestructionLogic::GetRobotDestructionLogic() && ( CTFPlayerDestructionLogic::GetRobotDestructionLogic()->GetType() == CTFPlayerDestructionLogic::TYPE_PLAYER_DESTRUCTION ) )
-		{
-			if ( pPlayer->HasTheFlag() )
-			{
-				bShowCarryingWeaponPanel = false;			
-			}
 		}
 
 		m_pCarryingWeaponPanel->SetVisible( bShowCarryingWeaponPanel );
@@ -796,7 +787,6 @@ void CTFHudPlayerHealth::OnThink()
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_BLEEDING,					m_pBleedImage,					nXOffset,	Color( color_fade, 0, 0, 255 ) );
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_MARKEDFORDEATH,			m_pMarkedForDeathImage,			nXOffset,	Color( 255 - color_fade, 245 - color_fade, 245 - color_fade, 255 ) );
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_MARKEDFORDEATH_SILENT,	m_pMarkedForDeathImageSilent,	nXOffset,	Color( 125 - color_fade, 255 - color_fade, 255 - color_fade, 255 ) );
-			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_PASSTIME_PENALTY_DEBUFF,	m_pMarkedForDeathImageSilent,	nXOffset,	Color( 125 - color_fade, 255 - color_fade, 255 - color_fade, 255 ) );
 			SetPlayerHealthImagePanelVisibility( pPlayer, TF_COND_STUNNED,					m_pSlowedImage,					nXOffset,	Color( color_fade, color_fade, 0, 255 ) );
 			
 			UpdateHalloweenStatus();

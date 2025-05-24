@@ -733,10 +733,8 @@ public:
 			case kGameCategory_EventMix: m_Stats.m_sUserGameMode = "eventmix"; break;
 			case kGameCategory_Event247: m_Stats.m_sUserGameMode = "event247"; break;
 			case kGameCategory_SD: m_Stats.m_sUserGameMode = "sd"; break;
-			case kGameCategory_RobotDestruction: m_Stats.m_sUserGameMode = "rd"; break;
 			case kGameCategory_Powerup: m_Stats.m_sUserGameMode = "powerup"; break;
 			case kGameCategory_Featured: m_Stats.m_sUserGameMode = "featured"; break;
-			case kGameCategory_Passtime: m_Stats.m_sUserGameMode = "passtime"; break;
 			case kGameCategory_Community_Update: m_Stats.m_sUserGameMode = "community_update"; break;
 			case kGameCategory_Misc: m_Stats.m_sUserGameMode = "misc"; break;
 			//case kQuickplayGameType_Arena: stats.m_sUserGameMode = "arena"; break;
@@ -804,20 +802,12 @@ public:
 					m_vecStrRequiredTags.CopyAndAddToTail( "sd" );
 					AddMapsFilter( vecServerFilters, m_options.m_eSelectedGameType );
 					break;
-				case kGameCategory_RobotDestruction:
-					m_vecStrRequiredTags.CopyAndAddToTail( "rd" );
-					AddMapsFilter( vecServerFilters, m_options.m_eSelectedGameType );
-					break;
 				case kGameCategory_Powerup:
 					m_vecStrRequiredTags.CopyAndAddToTail( "powerup" );
 					AddMapsFilter( vecServerFilters, m_options.m_eSelectedGameType );
 					break;
 				case kGameCategory_Featured:
 					m_vecStrRequiredTags.CopyAndAddToTail( "featured" );
-					AddMapsFilter( vecServerFilters, m_options.m_eSelectedGameType );
-					break;
-				case kGameCategory_Passtime:
-					m_vecStrRequiredTags.CopyAndAddToTail( "passtime" );
 					AddMapsFilter( vecServerFilters, m_options.m_eSelectedGameType );
 					break;
 				case kGameCategory_Community_Update:
@@ -2305,8 +2295,6 @@ void CQuickplayPanelBase::ApplySchemeSettings( vgui::IScheme *pScheme )
 	AddItem( kGameCategory_CTF, 			"#Gametype_CTF", 				"#TF_GameModeDesc_CTF", 				"#TF_GameModeDetail_CTF", 				"#TF_Quickplay_Complexity2",	"illustrations/gamemode_ctf",					NULL );
 	AddItem( kGameCategory_Misc, 			"#Gametype_Misc", 				"#TF_GameModeDesc_Misc", 				"#TF_GameModeDetail_Misc", 				"#TF_Quickplay_Complexity2",	"illustrations/gamemode_sd",					NULL );
 	AddItem( kGameCategory_Powerup,			"#GameType_Powerup",			"#TF_GameModeDesc_Powerup",				"#TF_GameModeDetail_Powerup",			"#TF_Quickplay_Complexity3",	"illustrations/gamemode_powerup",				"illustrations/gamemode_powerup_beta" ); // Fix beta image once Heather has the image
-	AddItem( kGameCategory_Passtime,		"#GameType_Passtime",			"#TF_GameModeDesc_Passtime",			"#TF_GameModeDetail_Passtime",			"#TF_Quickplay_Complexity2",	"illustrations/gamemode_passtime",				"illustrations/gamemode_passtime_beta" );
-	AddItem( kGameCategory_RobotDestruction,"#Gametype_RobotDestruction",	"#TF_GameModeDesc_RobotDestruction",	"#TF_GameModeDetail_RobotDestruction",	"#TF_Quickplay_Complexity2",	"illustrations/gamemode_sd",					"illustrations/gamemode_robotdestruction_beta" );
 	if ( m_bShowRandomOption )
 		AddItem( kGameCategory_Quickplay, 		"#Gametype_Quickplay", 		"#TF_GameModeDesc_Quickplay",		"#TF_GameModeDetail_Quickplay", 	"#TF_Quickplay_Complexity2", "illustrations/quickplay", "illustrations/quickplay_beta" );
 

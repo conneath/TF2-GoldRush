@@ -24,7 +24,6 @@
 //-----------------------------------------------------------------------------
 // Purpose:  Parent panel for the various objective displays
 //-----------------------------------------------------------------------------
-class CTFHudPasstime;
 class CTFHudObjectiveStatus : public CHudElement, public vgui::EditablePanel
 {
 	DECLARE_CLASS_SIMPLE( CTFHudObjectiveStatus, vgui::EditablePanel );
@@ -55,8 +54,6 @@ private:
 	CControlPointProgressBar *m_pControlPointProgressBar;
 	CTFHudEscort			*m_pEscortPanel;
 	CTFHudMultipleEscort	*m_pMultipleEscortPanel;
-	class CTFHUDRobotDestruction	*m_pRobotDestructionPanel;
-	CTFHudPasstime			*m_pHudPasstime;
 };
 
 #endif	// TF_HUD_OBJECTIVESTATUS_H

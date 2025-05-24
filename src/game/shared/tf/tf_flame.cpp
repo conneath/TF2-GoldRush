@@ -12,7 +12,6 @@
 #ifdef GAME_DLL
 #include "tf_player.h"
 #include "tf_weapon_compound_bow.h"
-#include "tf_logic_robot_destruction.h"
 #include "ispatialpartition.h"
 #include "tf_fx.h"
 #endif // GAME_DLL
@@ -596,11 +595,6 @@ bool CFlameEntityEnum::EnumEntity( IHandleEntity *pHandleEntity )
 		// only add enemy objects
 		m_Targets.AddToTail( pEnt );
 	}
-	else if ( CTFRobotDestructionLogic::GetRobotDestructionLogic() && m_pShooter->GetTeamNumber() != pEnt->GetTeamNumber() && FClassnameIs( pEnt, "tf_robot_destruction_robot" ) )
-	{
-		// only add enemy robots
-		m_Targets.AddToTail( pEnt );
-	}
 	else if ( FClassnameIs( pEnt, "func_breakable" ) || FClassnameIs( pEnt, "tf_pumpkin_bomb" ) || FClassnameIs( pEnt, "tf_merasmus_trick_or_treat_prop" ) || FClassnameIs( pEnt, "tf_generic_bomb" ) )
 	{
 		m_Targets.AddToTail( pEnt );
@@ -631,11 +625,6 @@ bool CTFFlameManager::IsValidBurnTarget( CBaseEntity *pEntity ) const
 	else if ( pEntity->IsBaseObject() && m_hAttacker->GetTeamNumber() != pEntity->GetTeamNumber() )
 	{
 		// only add enemy objects
-		return true;
-	}
-	else if ( CTFRobotDestructionLogic::GetRobotDestructionLogic() && m_hAttacker->GetTeamNumber() != pEntity->GetTeamNumber() && FClassnameIs( pEntity, "tf_robot_destruction_robot" ) )
-	{
-		// only add enemy robots
 		return true;
 	}
 	else if ( FClassnameIs( pEntity, "func_breakable" ) || FClassnameIs( pEntity, "tf_pumpkin_bomb" ) || FClassnameIs( pEntity, "tf_merasmus_trick_or_treat_prop" ) || FClassnameIs( pEntity, "tf_generic_bomb" ) )

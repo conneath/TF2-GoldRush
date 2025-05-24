@@ -1511,13 +1511,8 @@ private:
 	double m_dMaxHealthDrainHealthAccumulator;
 
 	bool m_bAlreadyUsedExtendFreezeThisDeath = false;
-	
-	// begin passtime
-public:
-	bool SayAskForBall();
-	bool m_bPasstimeBallSlippery;
-	// end passtime
 
+public:
 	virtual bool ShouldForceTransmitsForTeam( int iTeam ) OVERRIDE;
 
 	virtual bool IsTruceValidForEnt( void ) const OVERRIDE;

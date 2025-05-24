@@ -591,8 +591,6 @@ bool IsCreepWaveMode( void ) const;
 	bool GameModeUsesMiniBosses( void ) { return IsMannVsMachineMode() || IsBountyMode(); }
 	bool GameModeUsesEscortPushLogic( void );
 
-	bool IsPasstimeMode() const { return m_nGameType == TF_GAMETYPE_PASSTIME; }
-
 	bool IsMannVsMachineRespecEnabled( void ) { return IsMannVsMachineMode() && tf_mvm_respec_enabled.GetBool(); }
 	bool CanPlayerUseRespec( CTFPlayer *pTFPlayer );
 
@@ -665,7 +663,6 @@ bool IsCreepWaveMode( void ) const;
 	
 	bool IsPlayingHybrid_CTF_CP( void ) const { return m_bPlayingHybrid_CTF_CP; }
 	bool IsPlayingSpecialDeliveryMode( void ) const { return m_bPlayingSpecialDeliveryMode; }
-	bool IsPlayingRobotDestructionMode( void ) const { return m_bPlayingRobotDestructionMode; }
 
 	virtual bool AllowThirdPersonCamera( void ) { return ( IsInMedievalMode() || ShowMatchSummary() ); }
 
@@ -794,7 +791,6 @@ bool IsCreepWaveMode( void ) const;
 
 	bool CheckWinLimit( bool bAllowEnd = true, int nAddValueWhenChecking = 0 ) OVERRIDE;
 	bool SetCtfWinningTeam();
-	bool SetPasstimeWinningTeam();
 	bool CheckCapsPerRound();
 	virtual void CheckRespawnWaves();
 	virtual void PlayWinSong( int team ) OVERRIDE;
@@ -1113,7 +1109,6 @@ private:
 	CNetworkHandle( CBonusRoundLogic, m_hBonusLogic );
 
 	CNetworkVar( bool, m_bPlayingKoth );
-	CNetworkVar( bool, m_bPlayingRobotDestructionMode );
 	CNetworkVar( bool, m_bPlayingMedieval );
 	CNetworkVar( bool, m_bPlayingHybrid_CTF_CP );
 	CNetworkVar( bool, m_bPlayingSpecialDeliveryMode );

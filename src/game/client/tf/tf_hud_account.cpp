@@ -42,8 +42,6 @@ typedef struct
 		ACCOUNT_DELTA_HEALING,
 		ACCOUNT_DELTA_DAMAGE,
 		ACCOUNT_DELTA_BONUS_POINTS,
-		ACCOUNT_DELTA_ROBOT_DESTRUCTION_POINT_RED,
-		ACCOUNT_DELTA_ROBOT_DESTRUCTION_POINT_BLUE,
 	};
 
 
@@ -1051,14 +1049,6 @@ Color CAccountPanel::GetColor( const account_delta_t::eAccountDeltaType_t& type 
 	else if ( type == account_delta_t::ACCOUNT_DELTA_DAMAGE )
 	{
 		return Color( hud_combattext_red.GetInt(), hud_combattext_green.GetInt(), hud_combattext_blue.GetInt() );
-	}
-	else if ( type == account_delta_t::ACCOUNT_DELTA_ROBOT_DESTRUCTION_POINT_BLUE )
-	{
-		return m_DeltaBlueRobotScoreColor;
-	}
-	else if ( type == account_delta_t::ACCOUNT_DELTA_ROBOT_DESTRUCTION_POINT_RED )
-	{
-		return m_DeltaRedRobotScoreColor;
 	}
 	
 	return Color( 255, 255, 255, 255 );

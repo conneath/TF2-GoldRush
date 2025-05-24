@@ -112,9 +112,6 @@ public:
 	void SW_CapEvent( int iPoint, int iPlayer, const char* pszEventID, int iPoints );
 	void SW_WriteHostsRow();
 
-	// Passtime
-	void SW_PasstimeRoundEnded();
-
 	// Utilities.
 	TF_Gamestats_LevelStats_t	*GetCurrentMap( void )			{ return m_reportedStats.m_pCurrentGame; }
 	TF_Gamestats_RoundStats_t*	GetRoundStatsForTeam( int iTeamNumber );
@@ -150,12 +147,6 @@ public:
 	int							m_iKillCount;
 	int							m_iPlayerUpdates;
 	int							m_iLoadoutChangesCount;
-
-	// Robot Destruction Struct
-	RobotDestructionStats_t		m_rdStats;
-
-	// Passtime
-	PasstimeStats_t				m_passtimeStats;
 
 private:
 	CUtlMap< CUtlConstString, int > m_MapsPlaytime;

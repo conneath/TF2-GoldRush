@@ -353,17 +353,14 @@ static TagPair_t kMapTags[] = {
 	{ "MapsCheckBox_Koth", "King of the Hill" },
 	{ "MapsCheckBox_AttackDefense", "Attack / Defense" },
 	{ "MapsCheckBox_SD", "Special Delivery" },
-	{ "MapsCheckBox_RobotDestruction", "Robot Destruction" },
 	{ "MapsCheckBox_MVM", "Mann vs. Machine" },
 	{ "MapsCheckBox_Powerup", "Mannpower" },
 	{ "MapsCheckBox_Medieval", "Medieval" },
-	{ "MapsCheckBox_PassTime", "PASS Time" },
 	{ "MapsCheckBox_Specialty", "Specialty" },
 	{ "MapsCheckBox_Halloween", "Halloween" },
 	{ "MapsCheckbox_Smissmas", "Smissmas" },
 	{ "MapsCheckbox_Night", "Night" },
 	{ "MapsCheckbox_Jungle", "Jungle" },
-	{ "MapsCheckBox_PD", "Player Destruction" },
 	{ "MapsCheckBox_Summer", "Summer" },
 };
 static uint32 kNumMapTags = ARRAYSIZE( kMapTags );

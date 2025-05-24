@@ -287,7 +287,7 @@ void JarExplode( int iEntIndex, CTFPlayer *pAttacker, CBaseEntity *pOriginalWeap
 				if ( pPlayer->m_Shared.IsInvulnerable() )
 					continue;
 
-				if ( pPlayer->m_Shared.InCond( TF_COND_PHASE ) || pPlayer->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+				if ( pPlayer->m_Shared.InCond( TF_COND_PHASE ) )
 					continue;
 
 				if ( !pPlayer->CanGetWet() )

@@ -20,7 +20,6 @@
 #include "props.h"
 #include "tf_objective_resource.h"
 #include "rtime.h"
-#include "tf_logic_player_destruction.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -506,10 +505,7 @@ bool CObjectTeleporter::PlayerCanBeTeleported( CTFPlayer *pPlayer )
 		return false;
 
 	if ( pPlayer->HasTheFlag() )
-	{
-		if ( !CTFPlayerDestructionLogic::GetRobotDestructionLogic() || ( CTFPlayerDestructionLogic::GetRobotDestructionLogic()->GetType() != CTFPlayerDestructionLogic::TYPE_PLAYER_DESTRUCTION ) )
-			return false;
-	}
+		return false;
 
 	CTFPlayer *pBuilder = GetBuilder();
 	if ( !pBuilder && m_bWasMapPlaced == false )
@@ -522,9 +518,6 @@ bool CObjectTeleporter::PlayerCanBeTeleported( CTFPlayer *pPlayer )
 		return false;
 
 	if ( m_bWasMapPlaced && GetTeamNumber() != pPlayer->GetTeamNumber() )
-		return false;
-
-	if ( TFGameRules() && TFGameRules()->IsPasstimeMode() && pPlayer->m_Shared.HasPasstimeBall() )
 		return false;
 
 	return true;
@@ -582,11 +575,6 @@ void CObjectTeleporter::TeleporterTouch( CBaseEntity *pOther )
 			// If they have the flag, print a warning that you can't tele with the flag
 			CSingleUserRecipientFilter filter( pPlayer );
 			TFGameRules()->SendHudNotification( filter, HUD_NOTIFY_NO_TELE_WITH_FLAG );
-		}
-		else if ( pPlayer->m_Shared.HasPasstimeBall() )
-		{
-			CSingleUserRecipientFilter filter( pPlayer );
-			TFGameRules()->SendHudNotification( filter, HUD_NOTIFY_PASSTIME_NO_TELE );
 		}
 
 		if ( m_hReservedForPlayer == pPlayer )

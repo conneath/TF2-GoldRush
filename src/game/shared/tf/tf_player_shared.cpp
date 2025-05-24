@@ -30,7 +30,6 @@
 #include "econ_entity_creation.h"
 #include "tf_mapinfo.h"
 #include "tf_dropped_weapon.h"
-#include "tf_weapon_passtime_gun.h"
 #include <functional>
 
 // Client specific.
@@ -61,7 +60,6 @@
 
 #include "c_tf_objective_resource.h"
 #include "tf_weapon_buff_item.h"
-#include "c_tf_passtime_logic.h"
 
 // Server specific.
 #else
@@ -87,8 +85,6 @@
 #include "tf_objective_resource.h"
 #include "halloween/tf_weapon_spellbook.h"
 #include "tf_weapon_buff_item.h"
-#include "tf_passtime_logic.h"
-#include "tf_weapon_passtime_gun.h"
 #include "entity_healthkit.h"
 #include "halloween/merasmus/merasmus.h"
 #include "tf_wearable_levelable_item.h"
@@ -417,10 +413,6 @@ BEGIN_RECV_TABLE_NOBASE( CTFPlayerShared, DT_TFPlayerShared )
 	RecvPropArray3( RECVINFO_ARRAY( m_nStreaks ), RecvPropInt( RECVINFO( m_nStreaks[0] ) ) ),
 	RecvPropInt( RECVINFO( m_unTauntSourceItemID_Low ) ),
 	RecvPropInt( RECVINFO( m_unTauntSourceItemID_High ) ),
-	RecvPropBool( RECVINFO( m_bHasPasstimeBall ) ),
-	RecvPropBool( RECVINFO( m_bIsTargetedForPasstimePass ) ),
-	RecvPropEHandle( RECVINFO( m_hPasstimePassTarget ) ),
-	RecvPropFloat( RECVINFO( m_askForBallTime ) ),
 	RecvPropBool( RECVINFO( m_bKingRuneBuffActive ) ),
 
 	RecvPropUtlVectorDataTable( m_ConditionData, TF_COND_LAST, DT_TFPlayerConditionSource ),
@@ -460,9 +452,6 @@ BEGIN_PREDICTION_DATA_NO_BASE( CTFPlayerShared )
 	DEFINE_PRED_FIELD( m_nPlayerCondEx4, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
 //	DEFINE_PRED_FIELD( m_hDisguiseWeapon, FIELD_EHANDLE, FTYPEDESC_INSENDTABLE ),
 	DEFINE_FIELD( m_flDisguiseCompleteTime, FIELD_FLOAT ),
-	DEFINE_PRED_FIELD( m_bHasPasstimeBall, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ),
-	DEFINE_PRED_FIELD( m_bIsTargetedForPasstimePass, FIELD_BOOLEAN, FTYPEDESC_INSENDTABLE ), // does this belong here?
-	DEFINE_PRED_FIELD( m_askForBallTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_flHolsterAnimTime, FIELD_FLOAT, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_ARRAY( m_flItemChargeMeter, FIELD_FLOAT, LAST_LOADOUT_SLOT_WITH_CHARGE_METER, FTYPEDESC_INSENDTABLE ),
 	DEFINE_PRED_FIELD( m_iStunIndex, FIELD_INTEGER, FTYPEDESC_INSENDTABLE ),
@@ -591,10 +580,6 @@ BEGIN_SEND_TABLE_NOBASE( CTFPlayerShared, DT_TFPlayerShared )
 	SendPropArray3( SENDINFO_ARRAY3( m_nStreaks ), SendPropInt( SENDINFO_ARRAY( m_nStreaks ) ) ),
 	SendPropInt( SENDINFO( m_unTauntSourceItemID_Low ), -1, SPROP_UNSIGNED ),
 	SendPropInt( SENDINFO( m_unTauntSourceItemID_High ), -1, SPROP_UNSIGNED ),
-	SendPropBool( SENDINFO( m_bHasPasstimeBall ) ),
-	SendPropBool( SENDINFO( m_bIsTargetedForPasstimePass ) ),
-	SendPropEHandle( SENDINFO( m_hPasstimePassTarget ) ),
-	SendPropFloat( SENDINFO( m_askForBallTime ) ),
 	SendPropBool( SENDINFO( m_bKingRuneBuffActive ) ),
 
 	SendPropUtlVectorDataTable( m_ConditionData, TF_COND_LAST, DT_TFPlayerConditionSource ),
@@ -859,11 +844,6 @@ CTFPlayerShared::CTFPlayerShared()
 		SetItemChargeMeter( loadout_positions_t(i), 0.f );
 	}
 
-	m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_NONE;
-	m_bHasPasstimeBall = false;
-	m_bIsTargetedForPasstimePass = false;
-	m_askForBallTime = 0.0f;
-
 	m_flHolsterAnimTime = 0.f;
 	m_hSwitchTo = NULL;
 
@@ -885,11 +865,6 @@ void CTFPlayerShared::Init( CTFPlayer *pPlayer )
 	m_iPhaseDamage = 0;
 	m_iWeaponKnockbackID = -1;
 	m_hStunner = NULL;
-
-	m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_NONE;
-	m_bHasPasstimeBall = false;
-	m_bIsTargetedForPasstimePass = false;
-	m_askForBallTime = 0.0f;
 
 	m_bMotionCloak = false;
 
@@ -967,11 +942,6 @@ void CTFPlayerShared::Spawn( void )
 	SetRevengeCrits( 0 );
 
 	m_PlayerStuns.RemoveAll();
-
-	m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_NONE;
-	m_bHasPasstimeBall = false;
-	m_bIsTargetedForPasstimePass = false;
-	m_askForBallTime = 0.0f;
 #else
 	m_bSyncingConditions = false;
 #endif
@@ -1639,7 +1609,6 @@ void CTFPlayerShared::OnConditionAdded( ETFCond eCond )
 		OnAddReprogrammed();
 		break;
 
-	case TF_COND_PASSTIME_PENALTY_DEBUFF:
 	case TF_COND_MARKEDFORDEATH_SILENT:
 		OnAddMarkedForDeathSilent();
 		break;
@@ -1710,10 +1679,6 @@ void CTFPlayerShared::OnConditionAdded( ETFCond eCond )
 
 	case TF_COND_HALLOWEEN_KART_CAGE:
 		OnAddHalloweenKartCage();
-		break;
-
-	case TF_COND_PASSTIME_INTERCEPTION:
-		OnAddPasstimeInterception();
 		break;
 
 	case TF_COND_PURGATORY:
@@ -1892,7 +1857,6 @@ void CTFPlayerShared::OnConditionRemoved( ETFCond eCond )
 		OnRemoveReprogrammed();
 		break;
 
-	case TF_COND_PASSTIME_PENALTY_DEBUFF:
 	case TF_COND_MARKEDFORDEATH_SILENT:
 		OnRemoveMarkedForDeathSilent();
 		break;
@@ -1962,10 +1926,6 @@ void CTFPlayerShared::OnConditionRemoved( ETFCond eCond )
 
 	case TF_COND_HALLOWEEN_KART_CAGE:
 		OnRemoveHalloweenKartCage();
-		break;
-
-	case TF_COND_PASSTIME_INTERCEPTION:
-		OnRemovePasstimeInterception();
 		break;
 
 	case TF_COND_PURGATORY:
@@ -2764,7 +2724,7 @@ void CTFPlayerShared::ConditionGameRulesThink( void )
 		m_flSpyTranqBuffDuration = 0;
 	}
 
-	if ( TFGameRules()->IsMannVsMachineMode() || TFGameRules()->IsPlayingRobotDestructionMode() )
+	if ( TFGameRules()->IsMannVsMachineMode() )
 	{
 		RadiusCurrencyCollectionCheck();
 	}
@@ -4712,63 +4672,6 @@ void CTFPlayerShared::OnRemoveHalloweenKartCage( void )
 //-----------------------------------------------------------------------------
 // Purpose: 
 //-----------------------------------------------------------------------------
-void CTFPlayerShared::OnAddPasstimeInterception( void )
-{
-#ifdef CLIENT_DLL
-	if ( !m_pOuter->m_pPhaseStandingEffect )
-	{
-		m_pOuter->m_pPhaseStandingEffect = m_pOuter->ParticleProp()->Create( "warp_version", PATTACH_ABSORIGIN_FOLLOW );
-	}
-
-	if ( m_pOuter->IsLocalPlayer() )
-	{
-		IMaterial *pMaterial = materials->FindMaterial( TF_SCREEN_OVERLAY_MATERIAL_PHASE, TEXTURE_GROUP_CLIENT_EFFECTS, false );
-		if ( !IsErrorMaterial( pMaterial ) )
-		{
-			view->SetScreenOverlayMaterial( pMaterial );
-		}
-	}
-#else
-	if ( !m_bPhaseFXOn )
-	{
-		AddPhaseEffects();
-	}
-	m_pOuter->SpeakConceptIfAllowed( MP_CONCEPT_DODGING, "started_dodging:1" );
-#endif
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CTFPlayerShared::OnRemovePasstimeInterception( void )
-{
-#ifdef CLIENT_DLL
-	if ( m_pOuter->m_pPhaseStandingEffect )
-	{
-		m_pOuter->ParticleProp()->StopEmission( m_pOuter->m_pPhaseStandingEffect );
-		m_pOuter->m_pPhaseStandingEffect = NULL;
-	}		
-		
-	if ( m_pOuter->IsLocalPlayer() )
-	{
-		IMaterial *pMaterial = view->GetScreenOverlayMaterial();
-		if ( pMaterial && FStrEq( pMaterial->GetName(), TF_SCREEN_OVERLAY_MATERIAL_PHASE ) )
-		{
-			view->SetScreenOverlayMaterial( NULL );
-		}
-	}
-#else
-	if ( m_bPhaseFXOn )
-	{
-		RemovePhaseEffects();
-	}
-	m_pOuter->SpeakConceptIfAllowed( MP_CONCEPT_DODGING, "started_dodging:0" );
-#endif
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
 void CTFPlayerShared::OnAddInPurgatory( void )
 {
 #ifdef GAME_DLL
@@ -5392,7 +5295,7 @@ void CTFPlayerShared::Burn( CTFPlayer *pAttacker, CTFWeaponBase *pWeapon, float 
 		return;
 
 	//Don't ignite if I'm in phase mode.
-	if ( InCond( TF_COND_PHASE ) || InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+	if ( InCond( TF_COND_PHASE ) )
 		return;
 
 	// pyros don't burn persistently or take persistent burning damage, but we show brief burn effect so attacker can tell they hit
@@ -6772,7 +6675,7 @@ bool CTFPlayerShared::CanBeDebuffed( void ) const
 	if ( IsInvulnerable() )
 		return false;
 
-	if ( InCond( TF_COND_PHASE ) || InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+	if ( InCond( TF_COND_PHASE ) )
 		return false;
 
 	return true;
@@ -7073,12 +6976,6 @@ void CTFPlayerShared::DetermineDisguiseWeapon( bool bForcePrimary )
 				pFirstValidWeapon = pWeapon;
 			}
 
-			// skip passtime gun
-			if ( pWeapon->GetWeaponID() == TF_WEAPON_PASSTIME_GUN )
-			{
-				continue;
-			}
-
 			if ( pWeapon->GetSlot() == iCurrentSlot )
 			{
 				pItemWeapon = pWeapon;
@@ -7331,24 +7228,11 @@ bool CTFPlayerShared::CanRecieveMedigunChargeEffect( medigun_charge_types eType 
 	{
 		bCanRecieve = false;
 
-		// The "flag" in Player Destruction doesn't block uber
-		const CCaptureFlag* pFlag = static_cast< const CCaptureFlag* >( pItem );
-		if ( pFlag->GetType() == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-		{
-			bCanRecieve = true;
-		}
-
 		if ( TFGameRules()->IsMannVsMachineMode() )
 		{
 			// allow bot flag carriers to be ubered
 			bCanRecieve = true;
 		}
-	}
-
-	
-	if( TFGameRules() && TFGameRules()->IsPasstimeMode() )
-	{
-		bCanRecieve &= ! HasPasstimeBall();
 	}
 
 	return bCanRecieve;
@@ -8314,7 +8198,7 @@ void CTFPlayerShared::StunPlayer( float flTime, float flReductionAmount, int iSt
 		return;
 #endif
 
-	if ( InCond( TF_COND_PHASE ) || InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+	if ( InCond( TF_COND_PHASE ) )
 		return;
 
 	if ( InCond( TF_COND_INVULNERABLE_HIDE_UNLESS_DAMAGED ) && !InCond( TF_COND_MVM_BOT_STUN_RADIOWAVE ) )
@@ -9600,18 +9484,6 @@ float CTFPlayer::TeamFortress_CalculateMaxSpeed( bool bIgnoreSpecialAbility /*= 
 
 void CTFPlayer::TeamFortress_SetSpeed()
 {
-#ifdef GAME_DLL
-	if ( TFGameRules() && TFGameRules()->IsPasstimeMode() && g_pPasstimeLogic )
-	{
-		float flPackSpeed = g_pPasstimeLogic->GetPackSpeed( this );
-		if ( flPackSpeed > 0 ) 
-		{
-			SetMaxSpeed( flPackSpeed );
-			return;
-		}
-	}
-#endif
-
 	const float fMaxSpeed = TeamFortress_CalculateMaxSpeed();
 
 	// Set the speed
@@ -10593,12 +10465,6 @@ bool CTFPlayer::CanAttack( int iCanAttackFlags )
 
 	Assert( pRules );
 
-	if ( m_Shared.HasPasstimeBall() ) 
-	{
-		// Always allow throwing the ball.
-		return true;
-	}
-
 	if ( m_Shared.IsFeignDeathReady() )
 	{
 #ifdef CLIENT_DLL
@@ -10703,7 +10569,6 @@ bool CTFPlayer::DoClassSpecialSkill( void )
 		break;
 
 	case TF_CLASS_DEMOMAN:
-		if ( !m_Shared.HasPasstimeBall() )
 		{
 			CTFPipebombLauncher *pPipebombLauncher = static_cast<CTFPipebombLauncher*>( Weapon_OwnsThisID( TF_WEAPON_PIPEBOMBLAUNCHER ) );
 			if ( pPipebombLauncher )
@@ -10723,10 +10588,7 @@ bool CTFPlayer::DoClassSpecialSkill( void )
 		bDoSkill = true;
 		break;
 	case TF_CLASS_ENGINEER:
-		if ( !m_Shared.HasPasstimeBall() )
-		{
-			bDoSkill = TryToPickupBuilding();
-		}
+		bDoSkill = TryToPickupBuilding();
 		break;
 	default:
 		break;
@@ -10949,9 +10811,7 @@ bool CTFPlayer::TryToPickupBuilding()
 //-----------------------------------------------------------------------------
 bool CTFPlayer::CanGoInvisible( bool bAllowWhileCarryingFlag )
 {
-	// The "flag" in Player Destruction doesn't block cloak
-	ETFFlagType ignoreTypes[] = { TF_FLAGTYPE_PLAYER_DESTRUCTION };
-	if ( !bAllowWhileCarryingFlag && ( HasTheFlag( ignoreTypes, ARRAYSIZE( ignoreTypes ) ) || m_Shared.HasPasstimeBall() ) )
+	if ( !bAllowWhileCarryingFlag && HasTheFlag() )
 	{
 		HintMessage( HINT_CANNOT_CLOAK_WITH_FLAG );
 		return false;
@@ -10974,7 +10834,7 @@ bool CTFPlayer::CanGoInvisible( bool bAllowWhileCarryingFlag )
 //-----------------------------------------------------------------------------
 bool CTFPlayer::CanStartPhase( void )
 {
-	if ( HasTheFlag() || m_Shared.HasPasstimeBall() )
+	if ( HasTheFlag() )
 	{
 		HintMessage( HINT_CANNOT_PHASE_WITH_FLAG );
 		return false;
@@ -11186,13 +11046,12 @@ bool CTFPlayer::CanDisguise( void )
 
 	bool bHasFlag = false;
 
-	ETFFlagType ignoreTypes[] = { TF_FLAGTYPE_PLAYER_DESTRUCTION };
-	if ( HasTheFlag( ignoreTypes, ARRAYSIZE( ignoreTypes ) ) )
+	if ( HasTheFlag() )
 	{
 		bHasFlag = true;
 	}
 
-	if ( bHasFlag || m_Shared.HasPasstimeBall() )
+	if ( bHasFlag )
 	{
 		HintMessage( HINT_CANNOT_DISGUISE_WITH_FLAG );
 		return false;
@@ -12649,30 +12508,6 @@ void CTFPlayerShared::FireGameEvent( IGameEvent *event )
 	}
 #endif //GAME_DLL
 }
-
-//-----------------------------------------------------------------------------
-void CTFPlayerShared::SetPasstimePassTarget( CTFPlayer *pEnt ) 
-{ 
-	if ( CBaseEntity *pTarget = m_hPasstimePassTarget )
-	{
-		CTFPlayer *pPlayerTarget = ToTFPlayer( pTarget );
-		if ( pPlayerTarget )
-			pPlayerTarget->m_Shared.m_bIsTargetedForPasstimePass = false;
-	}
-
-	Assert( pEnt != m_pOuter );
-	m_hPasstimePassTarget = pEnt; 
-
-	if ( CBaseEntity *pTarget = m_hPasstimePassTarget )
-	{
-		CTFPlayer *pPlayerTarget = ToTFPlayer( pTarget );
-		if ( pPlayerTarget )
-			pPlayerTarget->m_Shared.m_bIsTargetedForPasstimePass = true;
-	}
-}
-
-//-----------------------------------------------------------------------------
-CTFPlayer *CTFPlayerShared::GetPasstimePassTarget() const { return m_hPasstimePassTarget.Get(); }
 
 //-----------------------------------------------------------------------------
 // Purpose: 

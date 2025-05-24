@@ -1486,12 +1486,5 @@ void CHudWeaponSelection::SelectSlot( int iSlot )
 //-----------------------------------------------------------------------------
 void CHudWeaponSelection::SwitchToLastWeapon()
 {
-	C_TFPlayer *pTFPlayer = ToTFPlayer( C_BasePlayer::GetLocalPlayer() );
-	if ( !pTFPlayer )
-		return;
-
-	if (TFGameRules() && TFGameRules()->IsPasstimeMode() && pTFPlayer->m_Shared.HasPasstimeBall() )
-		return;
-
 	CBaseHudWeaponSelection::SwitchToLastWeapon();
 }

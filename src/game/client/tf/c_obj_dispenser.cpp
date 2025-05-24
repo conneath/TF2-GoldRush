@@ -191,15 +191,7 @@ void C_ObjectDispenser::UpdateEffects( void )
 			// if we don't have a model, attach at the origin, otherwise use attachment 'heal_origin'
 			if ( FBitSet( GetObjectFlags(), OF_DOESNT_HAVE_A_MODEL ) )
 			{
-				// offset the origin to player's chest
-				if ( FBitSet( GetObjectFlags(), OF_PLAYER_DESTRUCTION ) )
-				{
-					pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW, NULL, Vector( 0, 0, 50 ) );
-				}
-				else
-				{
-					pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW );
-				}
+				pEffect = ParticleProp()->Create( pszEffectName, PATTACH_ABSORIGIN_FOLLOW );
 			}
 			else
 			{

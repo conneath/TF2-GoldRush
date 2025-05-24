@@ -350,18 +350,6 @@ void CTFWinPanel::FireGameEvent( IGameEvent * event )
 		case WINREASON_WINDIFFLIMIT:
 			g_pVGuiLocalize->ConstructString_safe( wzWinReason, g_pVGuiLocalize->Find( "#Winreason_WinDiffLimit" ), 1, pLocalizedTeamName );
 			break;
-		case WINREASON_RD_REACTOR_CAPTURED:
-			g_pVGuiLocalize->ConstructString_safe( wzWinReason, g_pVGuiLocalize->Find( "#Winreason_ReactorCaptured" ), 1, pLocalizedTeamName );
-			break;
-		case WINREASON_RD_CORES_COLLECTED:
-			g_pVGuiLocalize->ConstructString_safe( wzWinReason, g_pVGuiLocalize->Find( "#Winreason_CoresCollected" ), 1, pLocalizedTeamName );
-			break;
-		case WINREASON_RD_REACTOR_RETURNED:
-			g_pVGuiLocalize->ConstructString_safe( wzWinReason, g_pVGuiLocalize->Find( "#Winreason_ReactorReturned" ), 1, pLocalizedTeamName );
-			break;
-		case WINREASON_PD_POINTS:
-			g_pVGuiLocalize->ConstructString_safe( wzWinReason, g_pVGuiLocalize->Find( "#Winreason_PlayerDestructionPoints" ), 1, pLocalizedTeamName );
-			break;
 		case WINREASON_SCORED:
 			{
 				wchar_t wzScoreLimit[16];

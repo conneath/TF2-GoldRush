@@ -93,16 +93,11 @@
 #include "baseanimatedtextureproxy.h"
 #include "econ_entity.h"
 #include "halloween/tf_weapon_spellbook.h"
-#include "tf_logic_robot_destruction.h"
 #include "econ_notifications.h"
 #include "tf_weapon_buff_item.h"
 #include "tf_dropped_weapon.h"
 #include "tf_hud_notification_panel.h"
 #include "tf_dropped_weapon.h"
-#include "tf_hud_passtime_reticle.h"
-#include "passtime_convars.h"
-#include "c_tf_passtime_logic.h"
-#include "tf_weapon_passtime_gun.h"
 #include "eiface.h"
 #include "filesystem.h"
 #include "debugoverlay_shared.h"
@@ -465,9 +460,6 @@ public:
 			case PLAYERANIMEVENT_STUN_BEGIN:
 			case PLAYERANIMEVENT_STUN_MIDDLE:
 			case PLAYERANIMEVENT_STUN_END:
-			case PLAYERANIMEVENT_PASSTIME_THROW_BEGIN:
-			case PLAYERANIMEVENT_PASSTIME_THROW_MIDDLE:
-			case PLAYERANIMEVENT_PASSTIME_THROW_END:
 			case PLAYERANIMEVENT_CYOAPDA_BEGIN:
 			case PLAYERANIMEVENT_CYOAPDA_MIDDLE:
 			case PLAYERANIMEVENT_CYOAPDA_END:
@@ -3903,9 +3895,6 @@ C_TFPlayer::C_TFPlayer() :
 	m_flHelpmeButtonPressTime = 0.f;
 	m_bRegenerating = false;
 
-	m_pPasstimePlayerReticle = NULL;
-	m_pPasstimeAskForBallReticle = NULL;
-
 	m_iPlayerSkinOverride = 0;
 
 	ListenForGameEvent( "player_hurt" );
@@ -3951,9 +3940,6 @@ C_TFPlayer::~C_TFPlayer()
 	}
 
 	StopTauntSoundLoop();
-
-	delete m_pPasstimePlayerReticle;
-	delete m_pPasstimeAskForBallReticle;
 
 	if ( IsLocalPlayer() )
 	{
@@ -5010,7 +4996,7 @@ void C_TFPlayer::UpdatedMarkedForDeathEffect( bool bForceStop )
 	if ( IsLocalPlayer() )
 		return;
 
-	bool bShow = m_Shared.InCond( TF_COND_MARKEDFORDEATH ) || m_Shared.InCond( TF_COND_MARKEDFORDEATH_SILENT ) || m_Shared.InCond( TF_COND_PASSTIME_PENALTY_DEBUFF );
+	bool bShow = m_Shared.InCond( TF_COND_MARKEDFORDEATH ) || m_Shared.InCond( TF_COND_MARKEDFORDEATH_SILENT );
 
 	// force stop
 	if ( bForceStop || m_Shared.IsStealthed() || m_Shared.InCond( TF_COND_DISGUISED ) )
@@ -5853,41 +5839,6 @@ void C_TFPlayer::ClientThink()
 	}
 
 	UpdatedMarkedForDeathEffect();
-
-	if ( TFGameRules() && TFGameRules()->IsPasstimeMode() )
-	{
-	    // 
-	    // Passtime player reticle
-	    //
-	    if ( !IsLocalPlayer() && !m_pPasstimePlayerReticle )
-	    {
-		    m_pPasstimePlayerReticle = new C_PasstimePlayerReticle( this );
-	    }
-	    if ( m_pPasstimePlayerReticle )
-	    {
-		    m_pPasstimePlayerReticle->OnClientThink();
-	    }
-    
-	    // 
-	    // Passtime ask for ball reticle
-	    //
-	    if ( !IsLocalPlayer() && !m_pPasstimeAskForBallReticle )
-	    {
-		    m_pPasstimeAskForBallReticle = new C_PasstimeAskForBallReticle( this );
-	    }
-	    if ( m_pPasstimeAskForBallReticle )
-	    {
-		    m_pPasstimeAskForBallReticle->OnClientThink();
-	    }
-    
-		// 
-		// Passtime ask for ball button
-		//
-	    if ( m_afButtonPressed & IN_ATTACK3 )
-	    {
-		    engine->ClientCmd("voicemenu 1 8");
-	    }
-	}
 }
 
 void C_TFPlayer::Touch( CBaseEntity *pOther )
@@ -6447,9 +6398,6 @@ bool C_TFPlayer::PlayAnimEventInPrediction( PlayerAnimEvent_t event )
 	case PLAYERANIMEVENT_STUN_BEGIN:
 	case PLAYERANIMEVENT_STUN_MIDDLE:
 	case PLAYERANIMEVENT_STUN_END:
-	case PLAYERANIMEVENT_PASSTIME_THROW_BEGIN:
-	case PLAYERANIMEVENT_PASSTIME_THROW_MIDDLE:
-	case PLAYERANIMEVENT_PASSTIME_THROW_END:
 	case PLAYERANIMEVENT_CYOAPDA_BEGIN:
 	case PLAYERANIMEVENT_CYOAPDA_MIDDLE:
 	case PLAYERANIMEVENT_CYOAPDA_END:
@@ -9240,14 +9188,8 @@ bool C_TFPlayer::IsAllowedToSwitchWeapons( void )
 	if ( IsWeaponLowered() == true )
 		return false;
 
-	if ( TFGameRules() )
-	{
-		if ( TFGameRules()->IsPasstimeMode() && m_Shared.HasPasstimeBall() )
-			return false;
-
-		if ( TFGameRules()->ShowMatchSummary() )
-			return false;
-	}
+	if ( TFGameRules() && TFGameRules()->ShowMatchSummary())
+		return false;
 
 	// Can't weapon switch during a taunt.
 	if( m_Shared.InCond( TF_COND_TAUNTING ) && tf_allow_taunt_switch.GetInt() <= 1 )

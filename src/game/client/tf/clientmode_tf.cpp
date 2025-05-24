@@ -610,7 +610,6 @@ HeadtrackMovementMode_t ClientModeTFNormal::ShouldOverrideHeadtrackControl()
 		case OBS_MODE_ROAMING	:
 		case OBS_MODE_FIXED		:		// Checked - works.
 		case OBS_MODE_CHASE		:		// Checked - works.
-		case OBS_MODE_POI		:		// PASSTIME NOT CHECKED
 		case OBS_MODE_FREEZECAM	:		// Turned into OBS_MODE_CHASE in VR
 			return HMM_SHOOTMOVEMOUSE_LOOKFACE;
 		case OBS_MODE_IN_EYE	:		// Checked - works.

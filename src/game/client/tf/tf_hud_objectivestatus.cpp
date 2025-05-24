@@ -33,9 +33,6 @@
 #include "tf_gamerules.h"
 #include "tf_hud_arena_player_count.h"
 #include "c_tf_playerresource.h"
-#include "tf_hud_robot_destruction_status.h"
-#include "tf_hud_passtime.h"
-#include "c_tf_passtime_logic.h"
 
 void AddSubKeyNamed( KeyValues *pKeys, const char *pszName );
 
@@ -59,7 +56,6 @@ CTFHudObjectiveStatus::CTFHudObjectiveStatus( const char *pElementName )
 	, m_pControlPointProgressBar( NULL )
 	, m_pEscortPanel( NULL )
 	, m_pMultipleEscortPanel( NULL )
-	, m_pRobotDestructionPanel( NULL )
 {
 	Panel *pParent = g_pClientMode->GetViewport();
 	SetParent( pParent );
@@ -70,8 +66,6 @@ CTFHudObjectiveStatus::CTFHudObjectiveStatus( const char *pElementName )
 	m_pControlPointProgressBar = new CControlPointProgressBar( this );
 	m_pEscortPanel = new CTFHudEscort( this, "ObjectiveStatusEscort" );
 	m_pMultipleEscortPanel = new CTFHudMultipleEscort( this, "ObjectiveStatusMultipleEscort" );
-	m_pRobotDestructionPanel = NULL;
-	m_pHudPasstime = new CTFHudPasstime( this );
 
 	SetHiddenBits( 0 );
 
@@ -84,13 +78,6 @@ CTFHudObjectiveStatus::CTFHudObjectiveStatus( const char *pElementName )
 //-----------------------------------------------------------------------------
 void CTFHudObjectiveStatus::ApplySchemeSettings( IScheme *pScheme )
 {
-	if ( m_pRobotDestructionPanel )
-	{
-		m_pRobotDestructionPanel->MarkForDeletion();
-		m_pRobotDestructionPanel = NULL;
-	}
-	m_pRobotDestructionPanel = new CTFHUDRobotDestruction( this, "ObjectiveStatusRobotDestruction" );
-
 	// load control settings...
 	LoadControlSettings( "resource/UI/HudObjectiveStatus.res" );
 
@@ -137,16 +124,6 @@ void CTFHudObjectiveStatus::Reset()
 	{
 		m_pControlPointProgressBar->Reset();
 	}
-
-	if ( m_pRobotDestructionPanel )
-	{
-		m_pRobotDestructionPanel->Reset();
-	}
-
-	if ( m_pHudPasstime )
-	{
-		m_pHudPasstime->Reset();
-	}
 }
 
 //-----------------------------------------------------------------------------
@@ -171,12 +148,6 @@ void CTFHudObjectiveStatus::SetVisiblePanels( void )
 	//=============================================================================
 	int iGameType = TFGameRules()->GetGameType();
 	int iHudType = TFGameRules()->GetHUDType();
-
-	bool bIsPlayingRobotDestruction = TFGameRules()->IsPlayingRobotDestructionMode();
-	if ( m_pRobotDestructionPanel && m_pRobotDestructionPanel->IsVisible() != bIsPlayingRobotDestruction )
-	{
-		m_pRobotDestructionPanel->SetVisible( bIsPlayingRobotDestruction );
-	}
 
 	bool bCTFVisible = TFGameRules()->IsPlayingHybrid_CTF_CP();
 	if ( !bCTFVisible )
@@ -239,13 +210,6 @@ void CTFHudObjectiveStatus::SetVisiblePanels( void )
 		{
 			m_pMultipleEscortPanel->SetVisible( false );
 		}
-	}
-
-	if ( m_pHudPasstime )
-	{
-		bool bIsPasstime = iGameType == TF_GAMETYPE_PASSTIME;
-		m_pHudPasstime->SetVisible( bIsPasstime );
-		m_pHudPasstime->SetEnabled( bIsPasstime );
 	}
 
 	//=============================================================================

@@ -36,8 +36,6 @@
 	#include "tf_projectile_arrow.h"
 	#include "NextBot/NextBotManager.h"
 	#include "halloween/merasmus/merasmus_trick_or_treat_prop.h"
-	#include "tf_logic_robot_destruction.h"
-	#include "tf_passtime_logic.h"
 
 	ConVar  tf_flamethrower_velocity( "tf_flamethrower_velocity", "2300.0", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Initial velocity of flame damage entities." );
 	ConVar	tf_flamethrower_drag("tf_flamethrower_drag", "0.87", FCVAR_CHEAT | FCVAR_DEVELOPMENTONLY, "Air drag of flame damage entities." );
@@ -806,13 +804,6 @@ void CTFFlameThrower::PrimaryAttack()
 	// Move other players back to history positions based on local player's lag
 	lagcompensation->StartLagCompensation( pOwner, pOwner->GetCurrentCommand() );
 
-	// PASSTIME custom lag compensation for the ball; see also tf_fx_shared.cpp
-	// it would be better if all entities could opt-in to this, or a way for lagcompensation to handle non-players automatically
-	if ( g_pPasstimeLogic && g_pPasstimeLogic->GetBall() )
-	{
-		g_pPasstimeLogic->GetBall()->StartLagCompensation( pOwner, pOwner->GetCurrentCommand() );
-	}
-
 #endif
 #ifdef CLIENT_DLL
 	C_CTF_GameStats.Event_PlayerFiredWeapon( pOwner, IsCurrentAttackACrit() );
@@ -931,13 +922,6 @@ void CTFFlameThrower::PrimaryAttack()
 
 #if !defined (CLIENT_DLL)
 	lagcompensation->FinishLagCompensation( pOwner );
-
-	// PASSTIME custom lag compensation for the ball; see also tf_fx_shared.cpp
-	// it would be better if all entities could opt-in to this, or a way for lagcompensation to handle non-players automatically
-	if ( g_pPasstimeLogic && g_pPasstimeLogic->GetBall() )
-	{
-		g_pPasstimeLogic->GetBall()->FinishLagCompensation( pOwner );
-	}
 #endif
 
 	pOwner->m_Shared.OnAttack();
@@ -1905,9 +1889,7 @@ bool CTFFlameThrower::DeflectEntity( CBaseEntity *pTarget, CTFPlayer *pOwner, Ve
 		return false;
 
 	// can't deflect things on our own team
-	// except the passtime ball when in passtime mode
-	if ( (pTarget->GetTeamNumber() == pOwner->GetTeamNumber()) 
-		&& !(g_pPasstimeLogic && (g_pPasstimeLogic->GetBall() == pTarget)) )
+	if ( pTarget->GetTeamNumber() == pOwner->GetTeamNumber() )
 	{
 		return false;
 	}

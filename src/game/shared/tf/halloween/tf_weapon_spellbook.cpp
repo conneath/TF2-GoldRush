@@ -1720,7 +1720,7 @@ public:
 			if ( pTarget->m_Shared.IsInvulnerable() )
 				return;
 
-			if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) || pTarget->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+			if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) )
 				return;
 
 			pTarget->m_Shared.SelfBurn( 5.0f );
@@ -1934,7 +1934,7 @@ public:
 			if ( pTarget->m_Shared.IsInvulnerable() )
 				return;
 
-			if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) || pTarget->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+			if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) )
 				return;
 
 			// Stun the target
@@ -2923,7 +2923,7 @@ public:
 			CTFPlayer *pTFPlayer = ToTFPlayer( pTarget );
 			if ( pTFPlayer )
 			{
-				if ( pTFPlayer->m_Shared.InCond( TF_COND_PHASE ) || pTFPlayer->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+				if ( pTFPlayer->m_Shared.InCond( TF_COND_PHASE ) )
 					continue;
 
 				if ( pTFPlayer->m_Shared.IsInvulnerable() )
@@ -3418,7 +3418,7 @@ public:
 		if ( pTarget->m_Shared.IsInvulnerable() )
 			return;
 
-		if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) || pTarget->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+		if ( pTarget->m_Shared.InCond( TF_COND_PHASE ) )
 			return;
 
 		// Stun the target

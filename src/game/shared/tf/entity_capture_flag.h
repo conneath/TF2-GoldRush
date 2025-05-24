@@ -114,21 +114,6 @@ class CTFBot;
 #define TF_RESOURCE_EVENT_RED_CAPPED		"Announcer.SD_Event_CappedRed"
 #define TF_RESOURCE_EVENT_BLUE_CAPPED		"Announcer.SD_Event_CappedBlu"
 
-//=============================================================================
-//
-// Robot Destruction Flag defines.
-//
-
-#define TF_RD_ENEMY_STOLEN		"RD.EnemyStolen"
-#define TF_RD_ENEMY_DROPPED		"RD.EnemyDropped"
-#define TF_RD_ENEMY_CAPTURED	"RD.EnemyCaptured"
-#define TF_RD_ENEMY_RETURNED	"RD.EnemyReturned"
-
-#define TF_RD_TEAM_STOLEN		"RD.TeamStolen"
-#define TF_RD_TEAM_DROPPED		"RD.TeamDropped"
-#define TF_RD_TEAM_CAPTURED		"RD.TeamCaptured"
-#define TF_RD_TEAM_RETURNED		"RD.TeamReturned"
-
 #define TF_RESOURCE_CAPTURED_TEAM_SCORE	1
 
 //=============================================================================
@@ -272,7 +257,6 @@ public:
 
 #else // CLIENT DLL Functions
 	virtual bool	ShouldDraw() OVERRIDE;
-	virtual bool IsVisibleToTargetID() const OVERRIDE;
 	virtual const char	*GetIDString( void ) { return "entity_capture_flag"; };
 
 	virtual void	OnDataChanged( DataUpdateType_t updateType );
@@ -315,8 +299,6 @@ public:
 	void			GetHudIcon( int nTeam, char *pchName, int nBuffSize );
 	const char		*GetPaperEffect( void );
 	void			GetTrailEffect( int nTeam, char *pchName, int nBuffSize );
-
-	int				GetPointValue() const { return m_nPointValue.Get(); }
 private:
 
 	void			Reset( void );
@@ -340,7 +322,6 @@ private:
 	CNetworkVar( float, m_flMaxResetTime );		// Time the flag takes to return in the current mode
 	CNetworkVar( float, m_flNeutralTime );	// Time until the flag becomes neutral (used for the invade gametype)
 	CNetworkHandle( CBaseEntity, m_hPrevOwner );
-	CNetworkVar( int, m_nPointValue );	// How many points this flag is worth when scored.  Used in Robot Destruction mode.
 	CNetworkVar( float, m_flAutoCapTime );
 
 #ifdef GAME_DLL
@@ -369,7 +350,6 @@ private:
     inline bool IsFlagShotClockModePossible() const
     {
         return m_nType == TF_FLAGTYPE_CTF 
-			|| m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION 
 			|| m_nType == TF_FLAGTYPE_RESOURCE_CONTROL;
     }
 

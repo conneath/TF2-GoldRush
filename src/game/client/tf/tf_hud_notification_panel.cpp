@@ -464,17 +464,6 @@ const char *CHudNotificationPanel::GetNotificationByType( int iType, float& flDu
 		pszResult = "resource/UI/notifications/notify_golden_wrench.res";
 		break;
 
-	case HUD_NOTIFY_RD_ROBOT_UNDER_ATTACK:
-		if ( bOnBlueTeam )
-		{
-			pszResult = "resource/UI/notifications/notify_rd_robot_attacked_blue.res";
-		}
-		else
-		{
-			pszResult = "resource/UI/notifications/notify_rd_robot_attacked_red.res";
-		}
-		break;
-
 	case HUD_NOTIFY_HOW_TO_CONTROL_GHOST:
 		pszResult = "resource/UI/notifications/notify_how_to_control_ghost.res";
 		flDuration = 10.f;
@@ -488,44 +477,6 @@ const char *CHudNotificationPanel::GetNotificationByType( int iType, float& flDu
 	case HUD_NOTIFY_HOW_TO_CONTROL_GHOST_NO_RESPAWN:
 		pszResult = "resource/UI/notifications/notify_how_to_control_ghost_no_respawn.res";
 		flDuration = 10.f;
-		break;
-
-	// Passtime
-	case HUD_NOTIFY_PASSTIME_HOWTO: 
-		pszResult = "resource/UI/notifications/notify_passtime_howto.res"; 
-		flDuration = 10.f; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_TELE: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_tele.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_CARRY: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_carry.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_INVULN: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_invuln.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_DISGUISE: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_disguise.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_CLOAK:
-		pszResult = "resource/UI/notifications/notify_passtime_no_cloak.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_OOB:
-		pszResult = "resource/UI/notifications/notify_passtime_no_oob.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_HOLSTER: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_holster.res"; 
-		break;
-
-	case HUD_NOTIFY_PASSTIME_NO_TAUNT: 
-		pszResult = "resource/UI/notifications/notify_passtime_no_taunt.res"; 
 		break;
 
 	// Competitive

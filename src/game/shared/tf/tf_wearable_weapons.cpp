@@ -110,9 +110,6 @@ bool CTFWearableDemoShield::CanCharge( CTFPlayer *pPlayer )
 	if ( pPlayer->m_Shared.GetDemomanChargeMeter() == 100.f )
 		return true;
 
-	if ( TFGameRules() && TFGameRules()->IsPasstimeMode() && pPlayer->m_Shared.HasPasstimeBall() )
-		return false;
-
 	return false;
 }
 

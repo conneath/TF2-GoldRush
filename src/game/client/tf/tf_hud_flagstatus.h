@@ -18,7 +18,6 @@
 #include "hudelement.h"
 
 class CCaptureFlag;
-class CTFFlagCalloutPanel;
 
 //-----------------------------------------------------------------------------
 // Purpose:  Draws the rotated arrow panels
@@ -135,53 +134,6 @@ private:
 	bool					m_bPlayingSpecialDeliveryMode;
 
 	int						m_nNumValidFlags;
-};
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-class CTFFlagCalloutPanel : public CHudElement, public vgui::EditablePanel
-{
-	DECLARE_CLASS_SIMPLE( CTFFlagCalloutPanel, vgui::EditablePanel );
-public:
-	CTFFlagCalloutPanel( const char *pElementName );
-	~CTFFlagCalloutPanel( void );
-
-	virtual void ApplySchemeSettings( vgui::IScheme *pScheme );
-	virtual void PerformLayout( void );
-	virtual void OnTick( void );
-	virtual void PaintBackground( void );
-	virtual void Paint( void );
-	
-	void	GetCalloutPosition( const Vector &vecDelta, float flRadius, float *xpos, float *ypos, float *flRotation );
-	void	SetFlag( CCaptureFlag *pFlag, float flDuration, Vector &vecOffset );
-	static CTFFlagCalloutPanel *AddFlagCalloutIfNotFound( CCaptureFlag *pFlag, float flDuration, Vector &vecLocation );
-	bool	ShouldShowFlagIconToLocalPlayer( void );
-	void	ScaleAndPositionCallout( float flScale = 1.f );
-	
-	CHandle< CCaptureFlag > m_hFlag;
-
-private:
-	IMaterial		*m_pArrowMaterial;
-	CTFImagePanel	*m_pFlagCalloutPanel;
-	vgui::Label		*m_pFlagValueLabel;
-	CTFImagePanel	*m_pFlagStatusIcon;
-
-	float			m_flRemoveTime;
-	float			m_flFirstDisplayTime;
-	Vector			m_vecOffset;
-	int				m_iDrawArrow;
-	bool			m_bFlagVisible;		// LOS
-
-	float			m_flPrevScale;
-	int				m_nPanelWideOrig;
-	int				m_nPanelTallOrig;
-	int				m_nLabelWideOrig;
-	int				m_nLabelTallOrig;
-	int				m_nIconWideOrig;
-	int				m_nIconTallOrig;
-
-	static CUtlVector< CTFFlagCalloutPanel* > m_FlagCalloutPanels;
 };
 
 #endif	// TF_HUD_FLAGSTATUS_H

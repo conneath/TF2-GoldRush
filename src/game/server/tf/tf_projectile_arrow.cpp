@@ -22,7 +22,6 @@
 #include "player_vs_environment/tf_tank_boss.h"
 #include "halloween/halloween_base_boss.h"
 #include "halloween/merasmus/merasmus_trick_or_treat_prop.h"
-#include "tf_logic_robot_destruction.h"
 
 #include "tf_gamerules.h"
 #include "bot/tf_bot.h"
@@ -608,8 +607,7 @@ void CTFProjectile_Arrow::ArrowTouch( CBaseEntity *pOther )
 	}
 
 	CTFMerasmusTrickOrTreatProp *pMerasmusProp = dynamic_cast< CTFMerasmusTrickOrTreatProp* >( pOther );
-	CTFRobotDestruction_Robot *pRobot = dynamic_cast< CTFRobotDestruction_Robot* >( pOther );
-	if ( pOther->IsWorld() || ( !pOtherCombatCharacter && !pPumpkinBomb && !pMerasmusProp && !bShield && !pRobot ) )
+	if ( pOther->IsWorld() || ( !pOtherCombatCharacter && !pPumpkinBomb && !pMerasmusProp && !bShield ) )
 	{
 		// Check to see if we struck the skybox.
 		CheckSkyboxImpact( pOther );

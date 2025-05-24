@@ -480,62 +480,42 @@ void CTFMapInfoMenu::LoadMapPage()
 		
 			Q_strlower( mapInfoKey );
 
-			if( !g_pVGuiLocalize->Find( mapInfoKey ) )
+			if( !g_pVGuiLocalize->Find( mapInfoKey ) && TFGameRules() )
 			{
-				if ( StringHasPrefix( m_szMapName, "vsh_" ) )
+				if ( TFGameRules()->IsMannVsMachineMode() )
 				{
-					pszDescription = "#default_vsh_description";
+					pszDescription = "#default_mvm_description";
 				}
-				else if ( StringHasPrefix( m_szMapName, "zi_" ) )
+				else
 				{
-					pszDescription = "#default_zi_description";
-				}
-				else if ( TFGameRules() )
-				{
-					if ( TFGameRules()->IsMannVsMachineMode() )
+					switch ( TFGameRules()->GetGameType() )
 					{
-						pszDescription = "#default_mvm_description";
-					}
-					else
-					{
-						switch ( TFGameRules()->GetGameType() )
+					case TF_GAMETYPE_CTF:
+						pszDescription = "#default_ctf_description";
+						break;
+					case TF_GAMETYPE_CP:
+						if ( TFGameRules()->IsInKothMode() )
 						{
-						case TF_GAMETYPE_CTF:
-							pszDescription = "#default_ctf_description";
-							break;
-						case TF_GAMETYPE_CP:
-							if ( TFGameRules()->IsInKothMode() )
-							{
-								pszDescription = "#default_koth_description";
-							}
-							else
-							{
-								pszDescription = "#default_cp_description";
-							}
-							break;
-						case TF_GAMETYPE_ESCORT:
-							if ( TFGameRules()->HasMultipleTrains() )
-							{
-								pszDescription = "#default_payload_race_description";
-							}
-							else
-							{
-								pszDescription = "#default_payload_description";
-							}
-							break;
-						case TF_GAMETYPE_ARENA:
-							pszDescription = "#default_arena_description";
-							break;
-						case TF_GAMETYPE_RD:
-							pszDescription = "#default_rd_description";
-							break;
-						case TF_GAMETYPE_PASSTIME:
-							pszDescription = "#default_passtime_description";
-							break;
-						case TF_GAMETYPE_PD:
-							pszDescription = "#default_pd_description";
-							break;
+							pszDescription = "#default_koth_description";
 						}
+						else
+						{
+							pszDescription = "#default_cp_description";
+						}
+						break;
+					case TF_GAMETYPE_ESCORT:
+						if ( TFGameRules()->HasMultipleTrains() )
+						{
+							pszDescription = "#default_payload_race_description";
+						}
+						else
+						{
+							pszDescription = "#default_payload_description";
+						}
+						break;
+					case TF_GAMETYPE_ARENA:
+						pszDescription = "#default_arena_description";
+						break;
 					}
 				}
 			}

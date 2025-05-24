@@ -8,7 +8,6 @@
 #include "tf_gamerules.h"
 #include "tf_shareddefs.h"
 #include "filesystem.h"
-#include "tf_logic_player_destruction.h"
 
 #ifdef CLIENT_DLL
 #include <vgui_controls/Panel.h>
@@ -39,15 +38,12 @@ extern ConVar tf_rd_flag_ui_mode;
 #include "func_capture_zone.h"
 #include "nav_mesh/tf_nav_mesh.h"
 #include "player_vs_environment/tf_population_manager.h"
-#include "tf_logic_robot_destruction.h"
 #include "tf_logic_halloween_2014.h"
 extern ConVar tf_flag_caps_per_round;
 extern ConVar tf_mvm_endless_bomb_reset;
 extern ConVar tf_rd_min_points_to_steal;
 
 ConVar cl_flag_return_height( "cl_flag_return_height", "82", FCVAR_CHEAT );
-ConVar tf_rd_return_min_time( "tf_rd_return_min_time", "30" );
-ConVar tf_rd_return_max_time( "tf_rd_return_max_time", "90" );
 
 #endif
 
@@ -140,7 +136,6 @@ BEGIN_NETWORK_TABLE( CCaptureFlag, DT_CaptureFlag )
 	SendPropString( SENDINFO( m_szPaperEffect ) ),
 	SendPropString( SENDINFO( m_szTrailEffect ) ),
 	SendPropInt( SENDINFO( m_nUseTrailEffect ), 3, SPROP_UNSIGNED ),
-	SendPropInt( SENDINFO( m_nPointValue ) ),
 	SendPropFloat( SENDINFO( m_flAutoCapTime ) ),
 
 #else
@@ -157,7 +152,6 @@ BEGIN_NETWORK_TABLE( CCaptureFlag, DT_CaptureFlag )
 	RecvPropString( RECVINFO( m_szPaperEffect ) ),
 	RecvPropString( RECVINFO( m_szTrailEffect ) ),
 	RecvPropInt( RECVINFO( m_nUseTrailEffect ) ),
-	RecvPropInt( RECVINFO( m_nPointValue ) ),
 	RecvPropFloat( RECVINFO( m_flAutoCapTime ) ),
 
 #endif
@@ -174,7 +168,6 @@ BEGIN_DATADESC( CCaptureFlag )
 	DEFINE_KEYFIELD( m_bReturnBetweenWaves, FIELD_BOOLEAN, "ReturnBetweenWaves" ),
 	DEFINE_KEYFIELD( m_bVisibleWhenDisabled, FIELD_BOOLEAN, "VisibleWhenDisabled" ),
 	DEFINE_KEYFIELD( m_bUseShotClockMode, FIELD_BOOLEAN, "ShotClockMode" ),
-	DEFINE_KEYFIELD( m_nPointValue, FIELD_INTEGER, "PointValue" ),
 
 #ifdef GAME_DLL
 	DEFINE_KEYFIELD( m_iszModel, FIELD_STRING, "flag_model" ),
@@ -237,7 +230,6 @@ CCaptureFlag::CCaptureFlag()
 	m_iszHudIcon = NULL_STRING;
 	m_iszPaperEffect = NULL_STRING;
 	m_iszTrailEffect = NULL_STRING;
-	m_nPointValue = 0;
 
 	// Team specific sound throttling for Special Delivery
 	for ( int i = 0; i < ARRAYSIZE( m_flNextTeamSoundTime ); i++ )
@@ -373,15 +365,6 @@ void CCaptureFlag::Precache( void )
 	PrecacheScriptSound( TF_RESOURCE_EVENT_RED_CAPPED );
 	PrecacheScriptSound( TF_RESOURCE_EVENT_BLUE_CAPPED );
 
-	PrecacheScriptSound( TF_RD_ENEMY_STOLEN );
-	PrecacheScriptSound( TF_RD_ENEMY_DROPPED );
-	PrecacheScriptSound( TF_RD_ENEMY_CAPTURED );
-	PrecacheScriptSound( TF_RD_ENEMY_RETURNED );
-	PrecacheScriptSound( TF_RD_TEAM_STOLEN );
-	PrecacheScriptSound( TF_RD_TEAM_DROPPED );
-	PrecacheScriptSound( TF_RD_TEAM_CAPTURED );
-	PrecacheScriptSound( TF_RD_TEAM_RETURNED );
-
 	PrecacheParticleSystem( GetPaperEffect() );
 
 	char szFileName[ MAX_PATH ];
@@ -399,24 +382,7 @@ void CCaptureFlag::Precache( void )
 //-----------------------------------------------------------------------------
 bool CCaptureFlag::ShouldDraw()
 {
-	// don't draw flag on player in PD
-	if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		if ( GetMoveParent() && GetMoveParent()->IsPlayer() )
-		{
-			return false;
-		}
-	}
-
 	return BaseClass::ShouldDraw();
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-bool CCaptureFlag::IsVisibleToTargetID() const
-{ 
-	return !IsDisabled() && GetPointValue() > 0 && const_cast<CCaptureFlag*>( this )->ShouldDraw();
 }
 
 //-----------------------------------------------------------------------------
@@ -675,12 +641,6 @@ CCaptureFlag* CCaptureFlag::Create( const Vector& vecOrigin, const char *pszMode
 	pFlag->m_iszModel = MAKE_STRING( pszModelName );
 	pFlag->m_nType = type;
 
-	// don't show trail effect for PD flag
-	if ( type == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		pFlag->m_nUseTrailEffect = FLAG_EFFECTS_NONE;
-	}
-
 	DispatchSpawn( pFlag );
 
 	return pFlag;
@@ -696,32 +656,6 @@ void CCaptureFlag::Reset( void )
 #ifdef GAME_DLL
 	m_bInstantTrailRemove = true;
 	RemoveFlagTrail();
-
-	if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION && !IsDisabled() )
-	{
-		if ( m_nPointValue > 0 )
-		{
-			// Score points!
-			if ( CTFRobotDestructionLogic::GetRobotDestructionLogic() )
-			{
-				CTFRobotDestructionLogic::GetRobotDestructionLogic()->ScorePoints( GetTeamNumber()
-																				 , m_nPointValue.Get()
-																				 , SCORE_REACTOR_RETURNED
-																				 , NULL );
-
-				CTFRobotDestructionLogic::GetRobotDestructionLogic()->FlagDestroyed( GetTeamNumber() );
-				m_nPointValue = 0;
-			}
-		}
-
-		// Disable ourselves if our team currently has no points
-		SetDisabled( CTFRobotDestructionLogic::GetRobotDestructionLogic()->GetTargetScore( GetTeamNumber() ) < tf_rd_min_points_to_steal.GetInt() );
-	}
-	else if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		UTIL_Remove( this );
-		return;
-	}
 
 	// Set the flag position.
 	if ( !m_hInitialParent.Get() )
@@ -859,22 +793,6 @@ void CCaptureFlag::ResetMessage( void )
 		CPASAttenuationFilter filter( this, TF_RESOURCE_FLAGSPAWN );
 		PlaySound( filter, TF_RESOURCE_FLAGSPAWN );
 	}
-	else if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-	{
-		for ( int iTeam = TF_TEAM_RED; iTeam < TF_TEAM_COUNT; ++iTeam )
-		{
-			if ( iTeam == GetTeamNumber() )
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_ENEMY_RETURNED );
-			}
-			else
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_TEAM_RETURNED );
-			}
-		}
-	}
 
 	// Output.
 	m_outputOnReturn.FireOutput( this, this );
@@ -916,7 +834,7 @@ void CCaptureFlag::FlagTouch( CBaseEntity *pOther )
 #endif
 		
 		// Does my team own this flag? If so, no touch.
-		if ( m_nType == TF_FLAGTYPE_CTF || m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
+		if ( m_nType == TF_FLAGTYPE_CTF )
 		{
 			if ( !tf_flag_return_on_touch.GetBool() )
 				return;
@@ -969,8 +887,8 @@ void CCaptureFlag::FlagTouch( CBaseEntity *pOther )
 	if ( pPlayer->m_Shared.InCond( TF_COND_SELECTED_TO_TELEPORT ) )
 		return;
 
-	// Don't let invulnerable players pickup flags, except in PD
-	if ( pPlayer->m_Shared.IsInvulnerable() && m_nType != TF_FLAGTYPE_PLAYER_DESTRUCTION )
+	// Don't let invulnerable players pickup flags
+	if ( pPlayer->m_Shared.IsInvulnerable() )
 		return;
 
 	// Don't let stealthed spies pickup the flag
@@ -982,7 +900,7 @@ void CCaptureFlag::FlagTouch( CBaseEntity *pOther )
 		return;
 
 	// Don't let players carry multiple flags for user-made maps with >1
-	if ( pPlayer->HasTheFlag() && !( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION || m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION ) && !tf_flag_return_on_touch.GetBool() )
+	if ( pPlayer->HasTheFlag() && !tf_flag_return_on_touch.GetBool() )
 		return;
 
 #ifdef GAME_DLL
@@ -1042,40 +960,6 @@ void CCaptureFlag::PickUp( CTFPlayer *pPlayer, bool bInvisible )
 
 		pBot->SetFlagTarget( this );
 	}
-
-	if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-	{
-		if ( pPlayer->HasItem() && ( pPlayer->GetItem()->GetItemID() == TF_ITEM_CAPTURE_FLAG ) && pPlayer->GetItem() != this )
-		{
-			CTFRobotDestructionLogic::GetRobotDestructionLogic()->FlagDestroyed( GetTeamNumber() );
-
-			// If the player who touched us is on the other team and is already carrying a flag, add our score
-			// onto the flag that they're carrying
-			CCaptureFlag* pOtherFlag = static_cast< CCaptureFlag * >( pPlayer->GetItem() );
-			pOtherFlag->AddPointValue( m_nPointValue );
-			UTIL_Remove( this );
-			return;
-		}
-	}
-	else if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		if ( pPlayer->HasItem() && ( pPlayer->GetItem()->GetItemID() == TF_ITEM_CAPTURE_FLAG ) && pPlayer->GetItem() != this )
-		{
-			// If the player who touched us is already carrying a flag, add our score
-			// onto the flag that they're carrying
-			CCaptureFlag* pOtherFlag = static_cast< CCaptureFlag * >( pPlayer->GetItem() );
-			pOtherFlag->AddPointValue( m_nPointValue );
-			UTIL_Remove( this );
-
-			if ( CTFPlayerDestructionLogic::GetPlayerDestructionLogic() )
-			{
-				CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->CalcTeamLeader( pPlayer->GetTeamNumber() );
-				CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->PlayPropPickupSound( pPlayer );
-			}
-
-			return;
-		}
-	}
 #endif
 
 	// Call into the base class pickup.
@@ -1094,8 +978,8 @@ void CCaptureFlag::PickUp( CTFPlayer *pPlayer, bool bInvisible )
 		SetLocalAngles( vec3_angle );
 	}
 
-	// Remove the player's disguise if they're a spy, but not in PD
-	if ( pPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_SPY && m_nType != TF_FLAGTYPE_PLAYER_DESTRUCTION )
+	// Remove the player's disguise if they're a spy
+	if ( pPlayer->GetPlayerClass()->GetClassIndex() == TF_CLASS_SPY )
 	{
 		if ( pPlayer->m_Shared.InCond( TF_COND_DISGUISED ) ||
 			pPlayer->m_Shared.InCond( TF_COND_DISGUISING ))
@@ -1226,30 +1110,6 @@ void CCaptureFlag::PickUp( CTFPlayer *pPlayer, bool bInvisible )
 		ChangeTeam( pPlayer->GetTeamNumber() );
 		m_nSkin = ( GetTeamNumber() == TEAM_UNASSIGNED ) ? 2 : (GetTeamNumber() - 2);
 		m_nSkin = m_nSkin + TF_FLAG_NUMBEROFSKINS;
-	}
-	else if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-	{
-		for ( int iTeam = TF_TEAM_RED; iTeam < TF_TEAM_COUNT; ++iTeam )
-		{
-			if ( iTeam != pPlayer->GetTeamNumber() )
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_ENEMY_STOLEN, iTeam );
-			}
-			else
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_TEAM_STOLEN, iTeam );
-			}
-		}
-	}
-	else if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		if ( CTFPlayerDestructionLogic::GetPlayerDestructionLogic() )
-		{
-			CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->CalcTeamLeader( pPlayer->GetTeamNumber() );
-			CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->PlayPropPickupSound( pPlayer );
-		}
 	}
 
     // If the flag was at home, set the initial reset time to the max allowable time, otherwise it's to whatever it was
@@ -1530,33 +1390,6 @@ void CCaptureFlag::Capture( CTFPlayer *pPlayer, int nCapturePoint )
 		else
 		{
 			TFTeamMgr()->AddTeamScore( pPlayer->GetTeamNumber(), TF_RESOURCE_CAPTURED_TEAM_SCORE );
-		}
-	}
-	else if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-	{
-		for ( int iTeam = TF_TEAM_RED; iTeam < TF_TEAM_COUNT; ++iTeam )
-		{
-			if ( iTeam != pPlayer->GetTeamNumber() )
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_ENEMY_CAPTURED, iTeam );
-			}
-			else
-			{
-				CTeamRecipientFilter filter( iTeam, true );
-				PlaySound( filter, TF_RD_TEAM_CAPTURED, iTeam );
-			}
-		}
-
-		// Score points!
-		if ( CTFRobotDestructionLogic::GetRobotDestructionLogic() )
-		{
-			CTFRobotDestructionLogic::GetRobotDestructionLogic()->ScorePoints( pPlayer->GetTeamNumber()
-																			 , m_nPointValue.Get()
-																			 , SCORE_REACTOR_CAPTURED
-																			 , pPlayer );
-			CTFRobotDestructionLogic::GetRobotDestructionLogic()->FlagDestroyed( GetTeamNumber() );
-			m_nPointValue = 0;
 		}
 	}
 
@@ -1884,41 +1717,6 @@ void CCaptureFlag::Drop( CTFPlayer *pPlayer, bool bVisible,  bool bThrown /*= fa
 
 			CTeamRecipientFilter filter( iTeam, true );
 			PlaySound( filter, pszSound, iTeam );
-		}
-	}
-	else if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-	{
-		// If a player dropped this flag but the flag has less than the min to steal
-		// we just return the flag rather than have it exist on the ground
-		if ( GetPointValue() < tf_rd_min_points_to_steal.GetInt() )
-		{
-			ResetFlag();
-			return;
-		}
-		else if ( bMessage  )
-		{
-			for ( int iTeam = TF_TEAM_RED; iTeam < TF_TEAM_COUNT; ++iTeam )
-			{
-				// We only care about our own team dropping it in Special Delivery
-				if ( iTeam == pPlayer->GetTeamNumber() )
-				{
-					CTeamRecipientFilter filter( iTeam, true );
-					PlaySound( filter, TF_RD_TEAM_DROPPED, iTeam );
-				}
-				else
-				{
-					CTeamRecipientFilter filter( iTeam, true );
-					PlaySound( filter, TF_RD_ENEMY_DROPPED, iTeam );
-				}
-			}
-		}
-	}
-	else if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		if ( CTFPlayerDestructionLogic::GetPlayerDestructionLogic() )
-		{
-			CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->CalcTeamLeader( pPlayer->GetTeamNumber() );
-			CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->PlayPropDropSound( pPlayer );
 		}
 	}
 	
@@ -2622,61 +2420,7 @@ int	CCaptureFlag::GetReturnTime( int nMaxReturnTime )
 //-----------------------------------------------------------------------------
 int CCaptureFlag::GetMaxReturnTime( void )
 {
-    int nReturnTime = m_nReturnTime;
-
-
-    if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION )
-    {
-        int nMaxPoints = 300;
-        if ( CTFRobotDestructionLogic::GetRobotDestructionLogic() )
-        {
-            nMaxPoints = CTFRobotDestructionLogic::GetRobotDestructionLogic()->GetMaxPoints();
-        }
-        const int nMaxReturnTimePoints = nMaxPoints / 3;
-        nReturnTime = RemapValClamped(m_nPointValue, 0.f, nMaxReturnTimePoints, tf_rd_return_min_time.GetFloat(), tf_rd_return_max_time.GetFloat());
-    }
-	else if ( m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		if ( CTFPlayerDestructionLogic::GetPlayerDestructionLogic() )
-		{
-			nReturnTime = CTFPlayerDestructionLogic::GetPlayerDestructionLogic()->GetFlagResetDelay();
-		}
-	}
-
-    return nReturnTime;
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CCaptureFlag::AddPointValue( int nPoints )
-{ 
-	m_nPointValue += nPoints;
-
-	if ( m_nType == TF_FLAGTYPE_ROBOT_DESTRUCTION || m_nType == TF_FLAGTYPE_PLAYER_DESTRUCTION )
-	{
-		IGameEvent *pEvent = gameeventmanager->CreateEvent( "flagstatus_update" );
-		if ( pEvent )
-		{
-			pEvent->SetInt( "userid", m_hPrevOwner && m_hPrevOwner->IsPlayer() ? ToBasePlayer( m_hPrevOwner )->GetUserID() : -1 );
-			pEvent->SetInt( "entindex", entindex() );
-			gameeventmanager->FireEvent( pEvent );
-
-            // The return time is determined by how many points are in the flag, so update that. 
-            m_flLastResetDuration = GetMaxReturnTime();
-		}
-
-		if ( nPoints > 0 )
-		{
-			pEvent = gameeventmanager->CreateEvent( "teamplay_flag_event" );
-			if ( pEvent )
-			{
-				pEvent->SetInt( "player", m_hPrevOwner && m_hPrevOwner->IsPlayer() ? ToBasePlayer( m_hPrevOwner )->entindex() : -1 );
-				pEvent->SetInt( "eventtype", TF_FLAGEVENT_PICKUP );
-				gameeventmanager->FireEvent( pEvent );
-			}
-		}
-	}
+    return m_nReturnTime;
 }
 #endif // GAME_DLL
 

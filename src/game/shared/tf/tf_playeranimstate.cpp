@@ -16,7 +16,6 @@
 #include "tf_gamerules.h"
 #include "in_buttons.h"
 #include "debugoverlay_shared.h"
-#include "tf_weapon_passtime_gun.h"
 
 #ifdef CLIENT_DLL
 #include "c_tf_player.h"
@@ -515,62 +514,6 @@ void CTFPlayerAnimState::Update( float eyeYaw, float eyePitch )
 }
 
 //-----------------------------------------------------------------------------
-// Updates animation state if we are throwing the passtime ball
-//-----------------------------------------------------------------------------
-void CTFPlayerAnimState::CheckPasstimeThrowAnimation()
-{
-	CTFPlayer *pPlayer = GetTFPlayer();
-	if ( !pPlayer )
-	{
-		return;
-	}
-
-	// FIXME: there must be a better way of doing this...
-	CPasstimeGun *pGun = dynamic_cast< CPasstimeGun * >( pPlayer->GetEntityForLoadoutSlot( LOADOUT_POSITION_UTILITY ) );
-	if ( !pGun )
-	{
-		return;
-	}
-
-	if ( pGun->GetCurrentCharge() > 0 ) 
-	{
-		if ( pPlayer->m_Shared.m_iPasstimeThrowAnimState == PASSTIME_THROW_ANIM_NONE )
-		{
-			int iSeq = pPlayer->SelectWeightedSequence( ACT_MP_PASSTIME_THROW_BEGIN );
-			pPlayer->m_Shared.m_flPasstimeThrowAnimStateTime = gpGlobals->curtime + pPlayer->SequenceDuration( iSeq );
-			pPlayer->DoAnimationEvent( PLAYERANIMEVENT_PASSTIME_THROW_BEGIN );
-			pPlayer->m_Shared.m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_LOOP;
-		}
-		else if ( pPlayer->m_Shared.m_iPasstimeThrowAnimState == PASSTIME_THROW_ANIM_LOOP )
-		{
-			if ( gpGlobals->curtime > pPlayer->m_Shared.m_flPasstimeThrowAnimStateTime )
-			{
-				int iSeq = pPlayer->SelectWeightedSequence( ACT_MP_PASSTIME_THROW_MIDDLE );
-				pPlayer->m_Shared.m_flPasstimeThrowAnimStateTime = gpGlobals->curtime + pPlayer->SequenceDuration( iSeq );
-				pPlayer->DoAnimationEvent( PLAYERANIMEVENT_PASSTIME_THROW_MIDDLE );
-			}
-		}
-	}
-	else // not charging
-	{
-		 if ( pPlayer->m_Shared.m_iPasstimeThrowAnimState == PASSTIME_THROW_ANIM_LOOP )
-		 {
-			 pPlayer->DoAnimationEvent( PLAYERANIMEVENT_PASSTIME_THROW_END );
-			 int iSeq = pPlayer->SelectWeightedSequence( ACT_MP_PASSTIME_THROW_END );
-			 pPlayer->m_Shared.m_flPasstimeThrowAnimStateTime = gpGlobals->curtime + pPlayer->SequenceDuration( iSeq );
-			 pPlayer->m_Shared.m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_END;
-		 }
-		 else if ( pPlayer->m_Shared.m_iPasstimeThrowAnimState == PASSTIME_THROW_ANIM_END )
-		 {
-			 if ( gpGlobals->curtime > pPlayer->m_Shared.m_flPasstimeThrowAnimStateTime )
-			 {
-				 pPlayer->m_Shared.m_iPasstimeThrowAnimState = PASSTIME_THROW_ANIM_NONE;
-			 }
-		 }
-	}
-}
-
-//-----------------------------------------------------------------------------
 // Purpose: Updates animation state if we're stunned.
 //-----------------------------------------------------------------------------
 void CTFPlayerAnimState::CheckStunAnimation()
@@ -636,7 +579,6 @@ void CTFPlayerAnimState::CheckStunAnimation()
 Activity CTFPlayerAnimState::CalcMainActivity()
 {
 	CheckStunAnimation();
-	CheckPasstimeThrowAnimation();
 
 #ifdef CLIENT_DLL
 	bool bIsAiming = m_pTFPlayer->m_Shared.IsAiming();
@@ -1132,15 +1074,6 @@ void CTFPlayerAnimState::DoAnimationEvent( PlayerAnimEvent_t event, int nData )
 		break;
 	case PLAYERANIMEVENT_STUN_END:
 		RestartGesture( GESTURE_SLOT_CUSTOM, ACT_MP_STUN_END );
-		break;
-	case PLAYERANIMEVENT_PASSTIME_THROW_BEGIN:
-		RestartGesture( GESTURE_SLOT_CUSTOM, ACT_MP_PASSTIME_THROW_BEGIN, false );
-		break;
-	case PLAYERANIMEVENT_PASSTIME_THROW_MIDDLE:
-		RestartGesture( GESTURE_SLOT_CUSTOM, ACT_MP_PASSTIME_THROW_MIDDLE, false );
-		break;
-	case PLAYERANIMEVENT_PASSTIME_THROW_END:
-		RestartGesture( GESTURE_SLOT_CUSTOM, ACT_MP_PASSTIME_THROW_END );
 		break;
 	default:
 		{

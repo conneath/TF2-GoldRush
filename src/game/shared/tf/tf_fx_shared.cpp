@@ -16,7 +16,6 @@
 #else
 #include "tf_fx.h"
 #include "ilagcompensationmanager.h"
-#include "tf_passtime_logic.h"
 #endif
 
 ConVar tf_use_fixed_weaponspreads( "tf_use_fixed_weaponspreads", "0", FCVAR_REPLICATED | FCVAR_NOTIFY, "If set to 1, weapons that fire multiple pellets per shot will use a non-random pellet distribution." );
@@ -228,13 +227,6 @@ void FX_FireBullets( CTFWeaponBase *pWpn, int iPlayer, const Vector &vecOrigin, 
 #if !defined (CLIENT_DLL)
 	// Move other players back to history positions based on local player's lag
 	lagcompensation->StartLagCompensation( pPlayer, pPlayer->GetCurrentCommand() );
-	
-	// PASSTIME custom lag compensation for the ball; see also tf_weapon_flamethrower.cpp
-	// it would be better if all entities could opt-in to this, or a way for lagcompensation to handle non-players automatically
-	if ( g_pPasstimeLogic && g_pPasstimeLogic->GetBall() )
-	{
-		g_pPasstimeLogic->GetBall()->StartLagCompensation( pPlayer, pPlayer->GetCurrentCommand() );
-	}
 #endif
 
 	// Get the shooting angles.
@@ -397,13 +389,6 @@ void FX_FireBullets( CTFWeaponBase *pWpn, int iPlayer, const Vector &vecOrigin, 
 
 #if !defined (CLIENT_DLL)
 	lagcompensation->FinishLagCompensation( pPlayer );
-
-	// PASSTIME custom lag compensation for the ball; see also tf_weapon_flamethrower.cpp
-	// it would be better if all entities could opt-in to this, or a way for lagcompensation to handle non-players automatically
-	if ( g_pPasstimeLogic && g_pPasstimeLogic->GetBall() )
-	{
-		g_pPasstimeLogic->GetBall()->FinishLagCompensation( pPlayer );
-	}
 #endif
 
 	EndGroupingSounds();

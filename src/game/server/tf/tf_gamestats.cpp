@@ -23,10 +23,6 @@
 #include "vote_controller.h"
 #include "tf_mann_vs_machine_stats.h"
 
-#include "tf_passtime_logic.h"
-#include "filesystem.h" // for temp passtime local stats logging
-#include "passtime_convars.h"
-
 #include "tf_matchmaking_shared.h"
 
 #include "gc_clientsystem.h"
@@ -92,8 +88,6 @@ void CTFGameStats::Clear( void )
 	m_iPlayerUpdates = 0;
 	m_reportedStats.Clear();
 	Q_memset( m_aPlayerStats, 0, sizeof( m_aPlayerStats ) );
-	m_rdStats.Clear();
-	m_passtimeStats.Clear();
 	m_iLoadoutChangesCount = 1;
 }
 
@@ -1355,9 +1349,6 @@ void CTFGameStats::Event_RoundStart()
 	m_iKillCount = 0;
 	m_iPlayerUpdates = 0;
 	m_currentRoundRed.m_iRoundStartTime = GetSteamWorksSGameStatsUploader().GetTimeSinceEpoch();
-
-	m_rdStats.Clear();
-	m_passtimeStats.Clear();
 }
 
 //-----------------------------------------------------------------------------
@@ -1425,8 +1416,6 @@ void CTFGameStats::Event_RoundEnd( int iWinningTeam, bool bFullRound, float flRo
 			SW_GameStats_WritePlayer( pPlayer );
 		}
 	}
-
-	SW_PasstimeRoundEnded();
 }
 
 //-----------------------------------------------------------------------------
@@ -3168,259 +3157,3 @@ void CTFGameStats::SW_WriteHostsRow()
 
 #endif
 }
-
-//-----------------------------------------------------------------------------
-#undef min
-#undef max
-struct PasstimeHistogramStats
-{
-	double min, max, mean, median, mode, stdev;
-	PasstimeHistogramStats() : min(0), max(0), mean(0), median(0), mode(0), stdev(0) {}
-};
-
-static int qsort_ascending_uint16( const void *a, const void *b )
-{
-	return *((uint16*)b) - *((uint16*)a);
-}
-
-template<int TMaxSamples>
-static PasstimeHistogramStats Passtime_SampleStats( const uint16 (&samples)[TMaxSamples], uint16 iSampleCount )
-{
-	PasstimeHistogramStats result;
-	if ( (iSampleCount <= 1) || (iSampleCount > TMaxSamples) )
-	{
-		return result;
-	}
-
-	// mode is useless, so don't bother
-
-	// sort for median
-	qsort( (void*) &samples[0], iSampleCount, sizeof(samples[0]), &qsort_ascending_uint16 );
-
-	//
-	// Sum, Min, Max
-	//
-	double sum = 0;
-	result.min = DBL_MAX;
-	result.max = DBL_MIN;
-	for ( uint32 i = 0; i < iSampleCount; ++i )
-	{
-		float s = samples[i];
-		sum += s;
-		result.min = MIN( s, result.min );
-		result.max = MAX( s, result.max );
-	}
-
-	//
-	// Mean
-	//
-	result.mean = (double)sum / (double)iSampleCount;
-
-	//
-	// Median
-	//
-	result.median = samples[ iSampleCount / 2 ]; // close enough
-
-	//
-	// Stdev
-	//
-	for ( uint32 i = 0; i < iSampleCount; ++i )
-	{
-		double s = samples[i];
-		result.stdev += (s - result.mean) * (s - result.mean);
-	}
-	result.stdev = sqrt( result.stdev / ((double)(iSampleCount - 1)) );
-
-	return result;
-}
-
-template<int TBinCount>
-static PasstimeHistogramStats Passtime_HistogramStats( const uint32 (&hist)[TBinCount], uint32 iHistSum, uint32 iSampleCount )
-{
-	PasstimeHistogramStats result;
-	if ( iSampleCount <= 1 )
-	{
-		return result;
-	}
-
-	//
-	// Mean
-	//
-	result.mean = (float)iHistSum / (float)iSampleCount;
-
-	//
-	// Min
-	//
-	for ( uint32 i = 0; i < 256; ++i )
-	{
-		if ( hist[i] != 0 )
-		{
-			result.min = i;
-			break;
-		}
-	}
-
-	//
-	// Max
-	//
-	for ( int32 i = 255; i >= 0; --i )
-	{
-		if ( hist[i] != 0 )
-		{
-			result.max = i;
-			break;
-		}
-	}
-
-	//
-	// Median
-	//
-	int iMedSample = iSampleCount / 2;
-	int iMedian;
-	for ( iMedian = 0; iMedian < 256; ++iMedian )
-	{
-		if ( hist[iMedian] != 0 )
-			break;
-	}
-	while( (iMedSample > 0) && (iMedian < 256) )
-	{
-		iMedSample -= hist[iMedian];
-		++iMedian;
-	}
-	result.median = iMedian - 1;
-
-	//
-	// Mode, stdev
-	//
-	uint32 iLargestCount = 0;
-	result.mode = -1; // wat
-	for ( uint32 i = 0; i < 256; ++i )
-	{
-		uint32 iSampleCount = hist[i];
-		for ( uint32 j = 0; j < iSampleCount; ++j )
-		{
-			// this feels dumb
-			result.stdev += (i - result.mean) * (i - result.mean);
-		}
-
-		if ( iSampleCount > iLargestCount )
-		{
-			iLargestCount = iSampleCount;
-			result.mode = i;
-		}
-	}
-	result.stdev = sqrt( result.stdev / ((double)iSampleCount - 1) );
-
-	return result;
-}
-
-void CTFGameStats::SW_PasstimeRoundEnded()
-{
-#if !defined(NO_STEAM)
-	if ( !TFGameRules() || !g_pPasstimeLogic )
-	{
-		return;
-	}
-
-	// Flush data gathered so far...
-	GetSteamWorksSGameStatsUploader().FlushStats();
-
-	KeyValues* pKVData = new KeyValues( "TF2ServerPasstimeRoundEndedv2" );
-	pKVData->SetString( "MapID", m_currentMap.m_Header.m_szMapName );							// Reference table
-	pKVData->SetInt( "RoundIndex", m_iRoundsPlayed );
-
-	pKVData->SetInt( "TotalPassesStarted", m_passtimeStats.summary.nTotalPassesStarted );
-	pKVData->SetInt( "TotalPassesFailed", m_passtimeStats.summary.nTotalPassesFailed );
-	pKVData->SetInt( "TotalPassesShotDown", m_passtimeStats.summary.nTotalPassesShotDown );
-	pKVData->SetInt( "TotalPassesCompleted", m_passtimeStats.summary.nTotalPassesCompleted );
-	pKVData->SetInt( "TotalPassesCompletedNearGoal", m_passtimeStats.summary.nTotalPassesCompletedNearGoal );
-	pKVData->SetInt( "TotalPassesIntercepted", m_passtimeStats.summary.nTotalPassesIntercepted );
-	pKVData->SetInt( "TotalPassesInterceptedNearGoal", m_passtimeStats.summary.nTotalPassesInterceptedNearGoal );
-	pKVData->SetInt( "TotalPassRequests", m_passtimeStats.summary.nTotalPassRequests );
-	pKVData->SetInt( "TotalTosses", m_passtimeStats.summary.nTotalTosses );
-	pKVData->SetInt( "TotalTossesCompleted", m_passtimeStats.summary.nTotalTossesCompleted );
-	pKVData->SetInt( "TotalTossesIntercepted", m_passtimeStats.summary.nTotalTossesIntercepted );
-	pKVData->SetInt( "TotalTossesInterceptedNearGoal", m_passtimeStats.summary.nTotalTossesInterceptedNearGoal );
-	pKVData->SetInt( "TotalSteals", m_passtimeStats.summary.nTotalSteals );
-	pKVData->SetInt( "TotalStealsNearGoal", m_passtimeStats.summary.nTotalStealsNearGoal );
-	pKVData->SetInt( "TotalBallSpawnShots", m_passtimeStats.summary.nTotalBallSpawnShots );
-	pKVData->SetInt( "TotalScores", m_passtimeStats.summary.nTotalScores );
-	pKVData->SetInt( "TotalRecoveries", m_passtimeStats.summary.nTotalRecoveries );
-	pKVData->SetInt( "TotalCarrySec", m_passtimeStats.summary.nTotalCarrySec );
-	pKVData->SetInt( "TotalWinningTeamBallCarrySec", m_passtimeStats.summary.nTotalWinningTeamBallCarrySec );
-	pKVData->SetInt( "TotalLosingTeamBallCarrySec", m_passtimeStats.summary.nTotalLosingTeamBallCarrySec );
-	pKVData->SetInt( "TotalThrowCancels", m_passtimeStats.summary.nTotalThrowCancels );
-	pKVData->SetInt( "TotalSpeedBoosts", m_passtimeStats.summary.nTotalSpeedBoosts );
-	pKVData->SetInt( "TotalJumpPads", m_passtimeStats.summary.nTotalJumpPads );
-	pKVData->SetInt( "TotalCarrierSpeedBoosts", m_passtimeStats.summary.nTotalCarrierSpeedBoosts );
-	pKVData->SetInt( "TotalCarrierJumpPads", m_passtimeStats.summary.nTotalCarrierJumpPads );
-	pKVData->SetInt( "BallNeutralSec", m_passtimeStats.summary.nBallNeutralSec );
-	pKVData->SetInt( "GoalType", m_passtimeStats.summary.nGoalType );
-	pKVData->SetInt( "RoundEndReason", m_passtimeStats.summary.nRoundEndReason );
-	pKVData->SetInt( "RoundRemainingSec", m_passtimeStats.summary.nRoundRemainingSec );
-	pKVData->SetInt( "RoundMaxSec", m_passtimeStats.summary.nRoundMaxSec );
-	pKVData->SetInt( "RoundElapsedSec", m_passtimeStats.summary.nRoundMaxSec - m_passtimeStats.summary.nRoundRemainingSec );
-	pKVData->SetInt( "PlayersBlueMax", m_passtimeStats.summary.nPlayersBlueMax );
-	pKVData->SetInt( "PlayersRedMax", m_passtimeStats.summary.nPlayersRedMax );
-	pKVData->SetInt( "ScoreRed", m_passtimeStats.summary.nScoreRed );
-	pKVData->SetInt( "ScoreBlue", m_passtimeStats.summary.nScoreBlue );
-
-	pKVData->SetBool( "Stalemate", m_passtimeStats.summary.bStalemate );
-	pKVData->SetBool( "SuddenDeath", m_passtimeStats.summary.bSuddenDeath );
-	pKVData->SetBool( "MeleeOnlySuddenDeath", m_passtimeStats.summary.bMeleeOnlySuddenDeath );
-
-	auto ballFracStats = Passtime_HistogramStats( m_passtimeStats.summary.arrBallFracHist,
-		m_passtimeStats.summary.nBallFracHistSum, m_passtimeStats.summary.nBallFracSampleCount );
-	pKVData->SetInt( "BallFracHistMin", (int)round( ballFracStats.min ) );
-	pKVData->SetInt( "BallFracHistMax", (int)round( ballFracStats.max ) );
-	pKVData->SetInt( "BallFracHistMean", (int)round( ballFracStats.mean ) );
-	pKVData->SetInt( "BallFracHistMedian", (int)round( ballFracStats.median ) );
-	pKVData->SetInt( "BallFracHistMode", (int)round( ballFracStats.mode ) );
-	pKVData->SetInt( "BallFracHistStdev", (int)round( ballFracStats.stdev ) );
-	pKVData->SetInt( "BallFracHistSampleCount", (int)m_passtimeStats.summary.nBallFracSampleCount ); // for approx global average
-
-	auto passTravelDistStats = Passtime_SampleStats(
-		m_passtimeStats.summary.arrPassTravelDistSamples, m_passtimeStats.summary.nPassTravelDistSampleCount );
-	pKVData->SetInt( "PassTravelDistMin", (int)round( passTravelDistStats.min ) );
-	pKVData->SetInt( "PassTravelDistMax", (int)round( passTravelDistStats.max ) );
-	pKVData->SetInt( "PassTravelDistMean", (int)round( passTravelDistStats.mean ) );
-	pKVData->SetInt( "PassTravelDistMedian", (int)round( passTravelDistStats.median ) );
-	//pKVData->SetInt( "PassTravelDistMode", (int) round( passTravelDistStats.mode ) ); meaningless
-	pKVData->SetInt( "PassTravelDistStdev", (int)round( passTravelDistStats.stdev ) );
-	pKVData->SetInt( "PassTravelDistSampleCount", (int)m_passtimeStats.summary.nPassTravelDistSampleCount ); // for approx global average
-
-	// have to flatten class stats because stats system can't handle nested tables
-	{
-		char aClassKey[32] = { 0, };
-		for ( int nClass = TF_FIRST_NORMAL_CLASS; nClass <= TF_LAST_NORMAL_CLASS; ++nClass )
-		{
-			V_sprintf_safe( aClassKey, "TotalScores_%s", g_aRawPlayerClassNamesShort[nClass] );
-			pKVData->SetInt( aClassKey, m_passtimeStats.classes[nClass].nTotalScores );
-			V_sprintf_safe( aClassKey, "TotalCarrySec_%s", g_aRawPlayerClassNamesShort[nClass] );
-			pKVData->SetInt( aClassKey, m_passtimeStats.classes[nClass].nTotalCarrySec );
-		}
-	}
-
-
-	if ( tf_passtime_save_stats.GetBool() )
-	{
-		// do this before AddStatsForUpload because it might actually just delete pKVData
-
-		// i need to copy it because i need to add some keys and i don't want there to be any possibility
-		// of tainting the kv that's sent to the stats server
-		auto pKVCopy = pKVData->MakeCopy();
-		auto iNow = CRTime::RTime32TimeCur();
-		char filename[128];
-		V_sprintf_safe( filename, "passtime_stats_%u.txt", iNow );
-
-		// add keys to simulate what the stats server usually adds to the database automatically
-		pKVData->SetInt( "SessionID", 0 );
-		pKVData->SetInt( "TimeReported", iNow );
-
-		pKVData->SaveToFile( g_pFullFileSystem, filename );
-		pKVCopy->deleteThis();
-	}
-
-	GetSteamWorksSGameStatsUploader().AddStatsForUpload( pKVData );
-}
-#endif

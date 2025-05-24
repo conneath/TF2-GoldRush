@@ -45,8 +45,6 @@ public:
 	virtual Activity CalcMainActivity();
 	virtual void ComputePoseParam_AimYaw( CStudioHdr *pStudioHdr );
 
-	void CheckPasstimeThrowAnimation();
-
 	virtual float GetCurrentMaxGroundSpeed();
 	virtual float GetGesturePlaybackRate( void );
 

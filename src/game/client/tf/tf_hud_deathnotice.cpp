@@ -33,7 +33,6 @@
 #include "tf_gamerules.h"
 #include "econ_notifications.h"
 //#include "econ/econ_controls.h"
-#include "passtime_game_events.h"
 
 // memdbgon must be the last include file in a .cpp file!!!
 #include "tier0/memdbgon.h"
@@ -650,13 +649,6 @@ void CTFHudDeathNotice::Init()
 	//ListenForGameEvent( "throwable_hit" );
 
 	m_bShowItemOnKill = true;
-
-	// PASSTIME if this is called at level load or something we should check mode before this block
-	ListenForGameEvent( PasstimeGameEvents::BallGet::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::BallStolen::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::Score::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::PassCaught::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::BallBlocked::s_eventName );
 }
 
 void CTFHudDeathNotice::ApplySchemeSettings( vgui::IScheme *scheme )
@@ -1285,182 +1277,6 @@ void CTFHudDeathNotice::OnGameEvent( IGameEvent *event, int iDeathNoticeMsg )
 	//		Q_strncpy( msg.Killer.szName, szKillerBuf, ARRAYSIZE( msg.Killer.szName ) );
 	//	}
 	//}
-	else if ( FStrEq( "rd_robot_killed", pszEventName ) )
-	{
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		int killer = engine->GetPlayerForUserID( event->GetInt( "attacker" ) );
-		const char *killedwith = event->GetString( "weapon" );
-
-		// flags
-		if ( GetLocalPlayerIndex() == killer )
-			msg.bLocalPlayerInvolved = true;
-
-		msg.Killer.iTeam = g_PR->GetTeam( killer );
-		Q_strncpy( msg.Killer.szName, g_PR->GetPlayerName( killer ), ARRAYSIZE( msg.Killer.szName ) );
-
-		Q_strncpy( msg.Victim.szName, g_PR->GetTeam( killer ) == TF_TEAM_RED ? "BLUE ROBOT" : "RED ROBOT", ARRAYSIZE( msg.Victim.szName ) );
-		msg.Victim.iTeam = g_PR->GetTeam( killer ) == TF_TEAM_RED ? TF_TEAM_BLUE : TF_TEAM_RED;
-
-		Q_snprintf( msg.szIcon, sizeof(msg.szIcon), "d_%s", killedwith );
-	}
-	else if ( FStrEq( PasstimeGameEvents::BallGet::s_eventName, pszEventName ) ) // passtime ball get
-	{
-		PasstimeGameEvents::BallGet ev( event );
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		// info
-		V_wcsncpy( msg.wzInfoText, g_pVGuiLocalize->Find("#Msg_PasstimeBallGet"), sizeof( msg.wzInfoText ) );
-
-		// killer
-		const char *szPlayerName = g_PR->GetPlayerName( ev.ownerIndex);
-		Q_strncpy( msg.Killer.szName, szPlayerName, ARRAYSIZE( msg.Killer.szName ) );
-		msg.Killer.iTeam = g_PR->GetTeam( ev.ownerIndex );
-
-		// flags
-		if ( GetLocalPlayerIndex() == ev.ownerIndex )
-			msg.bLocalPlayerInvolved = true;
-
-		// icon
-		const char *const icon = "d_passtime_pass";
-		Q_strncpy( msg.szIcon, icon, ARRAYSIZE( msg.szIcon ) );
-	}
-	else if ( FStrEq( PasstimeGameEvents::BallStolen::s_eventName, pszEventName ) ) // passtime ball stolen
-	{
-		PasstimeGameEvents::BallStolen ev( event );
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		int attackerTeam = g_PR->GetTeam( ev.attackerIndex );
-		int victimTeam = g_PR->GetTeam( ev.victimIndex );
-
-		// attacker
-		const char *szPlayerName = g_PR->GetPlayerName( ev.attackerIndex );
-		Q_strncpy( msg.Killer.szName, szPlayerName, ARRAYSIZE( msg.Killer.szName ) );
-		msg.Killer.iTeam = attackerTeam;
-
-		// victim
-		szPlayerName = g_PR->GetPlayerName( ev.victimIndex );
-		Q_strncpy( msg.Victim.szName, szPlayerName, ARRAYSIZE( msg.Victim.szName ) );
-		msg.Victim.iTeam = victimTeam;
-
-		V_wcsncpy( msg.wzInfoText, g_pVGuiLocalize->Find("#Msg_PasstimeSteal"), sizeof( msg.wzInfoText ) );
-
-		// flags
-		int localPlayerIndex = GetLocalPlayerIndex();
-		msg.bLocalPlayerInvolved = (localPlayerIndex == ev.attackerIndex)
-			|| (localPlayerIndex == ev.victimIndex);
-
-		// icon
-		Q_strncpy( msg.szIcon, "d_passtime_steal", ARRAYSIZE(msg.szIcon) );
-	}
-	else if ( FStrEq( PasstimeGameEvents::Score::s_eventName, pszEventName ) ) // passtime score
-	{
-		PasstimeGameEvents::Score ev( event );
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		// info
-		if ( ev.numPoints > 1 )
-		{
-			wchar_t wzCount[10];
-			_snwprintf( wzCount, ARRAYSIZE( wzCount ), L"%d", ev.numPoints );
-			g_pVGuiLocalize->ConstructString_safe( msg.wzInfoText, g_pVGuiLocalize->Find("#Msg_PasstimeScoreCount"), 1, wzCount );
-		}
-		else
-		{
-			V_wcsncpy( msg.wzInfoText, g_pVGuiLocalize->Find("#Msg_PasstimeScore"), sizeof( msg.wzInfoText ) );
-		}
-		
-		// killer
-		const char *szPlayerName = g_PR->GetPlayerName( ev.scorerIndex );
-		Q_strncpy( msg.Killer.szName, szPlayerName, ARRAYSIZE( msg.Killer.szName ) );
-		msg.Killer.iTeam = g_PR->GetTeam( ev.scorerIndex );
-
-		// flags
-		if ( GetLocalPlayerIndex() == ev.scorerIndex )
-			msg.bLocalPlayerInvolved = true;
-
-		// icon
-		const char *const icon = (msg.Killer.iTeam == TF_TEAM_RED)
-			? "d_passtime_score_red"
-			: "d_passtime_score_blue";
-		Q_strncpy( msg.szIcon, icon, ARRAYSIZE( msg.szIcon ) );
-	}
-	else if ( FStrEq( PasstimeGameEvents::PassCaught::s_eventName, pszEventName ) ) // passtime pass
-	{
-		PasstimeGameEvents::PassCaught ev( event );
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		int passerTeam = g_PR->GetTeam( ev.passerIndex );
-		int catcherTeam = g_PR->GetTeam( ev.catcherIndex );
-
-		//
-		// Pass or interception?
-		//
-		int killerIndex, victimIndex, killerTeam, victimTeam;
-		const char *pszDesc;
-		if ( passerTeam == catcherTeam )
-		{
-			// pass
-			killerIndex = ev.passerIndex;
-			killerTeam = passerTeam;
-			victimIndex = ev.catcherIndex;
-			victimTeam = catcherTeam;
-			pszDesc = "#Msg_PasstimePassComplete";
-			Q_strncpy( msg.szIcon, "d_passtime_pass", ARRAYSIZE(msg.szIcon) );
-		}
-		else
-		{
-			// interception
-			victimIndex = ev.passerIndex;
-			victimTeam = passerTeam;
-			killerIndex = ev.catcherIndex;
-			killerTeam = catcherTeam;
-			pszDesc = "#Msg_PasstimeInterception";
-			Q_strncpy( msg.szIcon, "d_passtime_intercept", ARRAYSIZE(msg.szIcon) );
-		}
-
-		// killer
-		const char *szPlayerName = g_PR->GetPlayerName( killerIndex );
-		Q_strncpy( msg.Killer.szName, szPlayerName, ARRAYSIZE( msg.Killer.szName ) );
-		msg.Killer.iTeam = killerTeam;
-
-		// victim
-		szPlayerName = g_PR->GetPlayerName( victimIndex );
-		Q_strncpy( msg.Victim.szName, szPlayerName, ARRAYSIZE( msg.Victim.szName ) );
-		msg.Victim.iTeam = victimTeam;
-
-		V_wcsncpy( msg.wzInfoText, g_pVGuiLocalize->Find( pszDesc ), sizeof( msg.wzInfoText ) );
-
-		// flags
-		int localPlayerIndex = GetLocalPlayerIndex();
-		msg.bLocalPlayerInvolved = (localPlayerIndex == ev.catcherIndex)
-			|| (localPlayerIndex == ev.passerIndex);
-	}
-	else if ( FStrEq( PasstimeGameEvents::BallBlocked::s_eventName, pszEventName ) ) // passtime ball stolen
-	{
-		PasstimeGameEvents::BallBlocked ev( event );
-		DeathNoticeItem &msg = m_DeathNotices[ iDeathNoticeMsg ];
-
-		// blocker
-		const char *szPlayerName = g_PR->GetPlayerName( ev.blockerIndex );
-		Q_strncpy( msg.Killer.szName, szPlayerName, ARRAYSIZE( msg.Killer.szName ) );
-		msg.Killer.iTeam = g_PR->GetTeam( ev.blockerIndex );
-
-		// owner
-		szPlayerName = g_PR->GetPlayerName( ev.ownerIndex );
-		Q_strncpy( msg.Victim.szName, szPlayerName, ARRAYSIZE( msg.Victim.szName ) );
-		msg.Victim.iTeam = g_PR->GetTeam( ev.ownerIndex );
-
-		V_wcsncpy( msg.wzInfoText, g_pVGuiLocalize->Find("#Msg_PasstimeBlock"), sizeof( msg.wzInfoText ) );
-
-		// flags
-		int localPlayerIndex = GetLocalPlayerIndex();
-		msg.bLocalPlayerInvolved = (localPlayerIndex == ev.blockerIndex)
-			|| (localPlayerIndex == ev.ownerIndex);
-
-		// icon
-		Q_strncpy( msg.szIcon, "d_ball", ARRAYSIZE(msg.szIcon) );
-	}
 }
 
 //-----------------------------------------------------------------------------

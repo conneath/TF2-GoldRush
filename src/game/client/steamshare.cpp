@@ -21,7 +21,6 @@
 #endif
 #if defined ( TF_CLIENT_DLL )
 #include "tf_gamerules.h"
-#include "passtime_game_events.h"
 #include "c_playerresource.h"
 #endif // TF_CLIENT_DLL
 
@@ -179,11 +178,6 @@ bool CSteamShareSystem::Init()
 	ListenForGameEvent( "object_detonated" );
 	ListenForGameEvent( "teamplay_flag_event" );
 	ListenForGameEvent( "teamplay_point_captured" );
-	ListenForGameEvent( PasstimeGameEvents::Score::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::BallGet::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::PassCaught::s_eventName );
-	ListenForGameEvent( PasstimeGameEvents::BallFree::s_eventName );
-	ListenForGameEvent( "killed_ball_carrier" );
 	ListenForGameEvent( "localplayer_changeteam" );
 	ListenForGameEvent( "localplayer_changeclass" );
 	ListenForGameEvent( "player_death" );
@@ -450,85 +444,6 @@ void CSteamShareSystem::FireGameEvent( IGameEvent *event )
 					}
 				}
 			}
-		}
-	}
-	else if ( FStrEq( PasstimeGameEvents::Score::s_eventName, event->GetName() ) )
-	{
-		PasstimeGameEvents::Score ev( event );
-
-		int nLocalPlayer = GetLocalPlayerIndex();
-		int nScorer = ev.scorerIndex;
-		int nAssister = ev.assisterIndex;
-
-		if ( nScorer == nLocalPlayer || nAssister == nLocalPlayer )
-		{
-			const char *pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackScore" );
-			SteamTimeline()->AddTimelineEvent( ( GetLocalPlayerTeam() == TF_TEAM_BLUE ) ? "passtime_blu" : "passtime_red", pszTitle, "", TIMELINE_LOW_PRIORITY, 0.f, 0.f, k_ETimelineEventClipPriority_Standard );
-		}
-	}
-	else if ( FStrEq( PasstimeGameEvents::BallGet::s_eventName, event->GetName() ) )
-	{
-		PasstimeGameEvents::BallGet ev( event );
-
-		int nLocalPlayer = GetLocalPlayerIndex();
-		int nOwner = ev.ownerIndex;
-		int nTeam = ev.team;
-
-		if ( nOwner == nLocalPlayer )
-		{
-			const char *pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackPickedUp" );
-			SteamTimeline()->AddTimelineEvent( ( nTeam == TEAM_UNASSIGNED ) ? "passtime" : ( nTeam == TF_TEAM_BLUE ) ? "passtime_blu" : "passtime_red", pszTitle, "", TIMELINE_LOW_PRIORITY, 0.f, 0.f, k_ETimelineEventClipPriority_Standard );
-		}
-	}
-	else if ( FStrEq( PasstimeGameEvents::PassCaught::s_eventName, event->GetName() ) )
-	{
-		PasstimeGameEvents::PassCaught ev( event );
-
-		if ( g_PR )
-		{
-			int nLocalPlayer = GetLocalPlayerIndex();
-			int nCatcher = ev.catcherIndex;
-			int nCatcherTeam = g_PR->GetTeam( nCatcher );
-			int nPasserTeam = g_PR->GetTeam( ev.passerIndex );
-
-			if ( nCatcher == nLocalPlayer )
-			{
-				const char *pszTitle = nullptr;
-				if ( nPasserTeam == nCatcherTeam )
-				{
-					pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackPass" );
-				}
-				else
-				{
-					pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackIntercepted" );
-				}
-				SteamTimeline()->AddTimelineEvent( ( nCatcherTeam == TF_TEAM_BLUE ) ? "passtime_blu" : "passtime_red", pszTitle, "", TIMELINE_LOW_PRIORITY, 0.f, 0.f, k_ETimelineEventClipPriority_Standard );
-			}
-		}
-	}
-	else if ( FStrEq( PasstimeGameEvents::BallFree::s_eventName, event->GetName() ) )
-	{
-		PasstimeGameEvents::BallFree ev( event );
-
-		int nLocalPlayer = GetLocalPlayerIndex();
-		int nOwner = ev.ownerIndex;
-
-		if ( nOwner == nLocalPlayer )
-		{
-			const char *pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackLost" );
-			SteamTimeline()->AddTimelineEvent( ( GetLocalPlayerTeam() == TF_TEAM_BLUE ) ? "passtime_blu_destroyed" : "passtime_red_destroyed", pszTitle, "", TIMELINE_LOW_PRIORITY, 0.f, 0.f, k_ETimelineEventClipPriority_Standard );
-		}
-	}
-	else if ( !V_stricmp( event->GetName(), "killed_ball_carrier" ) )
-	{
-		int nLocalPlayer = GetLocalPlayerIndex();
-		int nAttacker = event->GetInt( "attacker" );
-		int nAssister = event->GetInt( "assister" );
-
-		if ( nAttacker == nLocalPlayer || nAssister == nLocalPlayer )
-		{
-			const char *pszTitle = GetLocalizedTitleString( "#TF_Timeline_JackCarrier" );
-			SteamTimeline()->AddTimelineEvent( ( GetLocalPlayerTeam() == TF_TEAM_BLUE ) ? "passtime_red_destroyed" : "passtime_blu_destroyed", pszTitle, "", TIMELINE_LOW_PRIORITY, 0.f, 0.f, k_ETimelineEventClipPriority_Standard );
 		}
 	}
 #endif

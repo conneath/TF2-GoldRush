@@ -127,10 +127,6 @@ void CFuncRespawnRoom::RespawnRoomTouch(CBaseEntity *pOther)
 			{
 				pPlayer->DropFlag();
 			}
-			else if ( TFGameRules() && TFGameRules()->GetGameType() == TF_GAMETYPE_PD && pPlayer->HasItem() && ( pPlayer->GetItem()->GetItemID() == TF_ITEM_CAPTURE_FLAG ) )
-			{
-				pPlayer->GetItem()->Drop( pPlayer, true, true, true );
-			}
 
 			if ( pPlayer->m_Shared.IsCarryingObject() && TFGameRules()->IsMannVsMachineMode() )
 			{

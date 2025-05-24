@@ -89,20 +89,10 @@ void IMatchGroupDescription::SetupBadgePanel( CBaseModelPanel *pModelPanel, cons
 #ifdef GAME_DLL
 bool IMatchGroupDescription::InitServerSettingsForMatch( const CTFGSLobby* pLobby ) const
 {
-	extern bool IsCustomGameMode( const char *pszMapName );
-	if ( IsCustomGameMode( pLobby->GetMapName() ) )
-	{
-		// HACK(misyl): Force a custom cfg for custom game modes.
-		servercfgfile.SetValue( "server_custom.cfg" );
-		lservercfgfile.SetValue( "server_custom.cfg" );
-	}
-	else
-	{
-		// Setting servercfgfile to our mode-specific config causes the server to exec it once it finishes
-		// loading the map from the changelevel below
-		servercfgfile.SetValue( m_pszExecFileName );
-		lservercfgfile.SetValue( m_pszExecFileName );
-	}
+	// Setting servercfgfile to our mode-specific config causes the server to exec it once it finishes
+	// loading the map from the changelevel below
+	servercfgfile.SetValue( m_pszExecFileName );
+	lservercfgfile.SetValue( m_pszExecFileName );
 
 	return TFGameRules()->StartManagedMatch();
 }

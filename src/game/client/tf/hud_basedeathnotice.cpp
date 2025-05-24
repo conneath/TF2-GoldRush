@@ -21,7 +21,6 @@
 #include "tf_shareddefs.h"
 #include "tf_shareddefs.h"
 #include "tf_gamerules.h"
-#include "tf_logic_player_destruction.h"
 
 #include "hud_basedeathnotice.h"
 
@@ -66,7 +65,6 @@ void CHudBaseDeathNotice::Init( void )
 	ListenForGameEvent( "teamplay_point_captured" );
 	ListenForGameEvent( "teamplay_capture_blocked" );
 	ListenForGameEvent( "teamplay_flag_event" );
-	ListenForGameEvent( "rd_robot_killed" );
 	ListenForGameEvent( "special_score" );
 	ListenForGameEvent( "team_leader_killed" );
 }
@@ -531,21 +529,9 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 			}
 			else if ( ( event->GetInt( "damagebits" ) & DMG_VEHICLE ) || ( 0 == Q_stricmp( m_DeathNotices[iMsg].szIcon, "d_tracktrain" ) ) )
 			{
-#ifdef TF_CLIENT_DLL
-				char mapname[ MAX_MAP_NAME ];
-				Q_FileBase( engine->GetLevelName(), mapname, sizeof( mapname ) );
-				Q_strlower( mapname );
-				if ( FStrEq( mapname, "pd_galleria" ) )
-				{
-					Q_strncpy( m_DeathNotices[ iMsg ].szIcon, "d_resurfacer", ARRAYSIZE( m_DeathNotices[ iMsg ].szIcon ) );
-				}
-				else
-#endif // TF_CLIENT_DLL
-				{
-					// special case icon for hit-by-vehicle death
-					Q_strncpy( m_DeathNotices[ iMsg ].szIcon, "d_vehicle", ARRAYSIZE( m_DeathNotices[ iMsg ].szIcon ) );
-				}
-			}			
+				// special case icon for hit-by-vehicle death
+				Q_strncpy( m_DeathNotices[ iMsg ].szIcon, "d_vehicle", ARRAYSIZE( m_DeathNotices[ iMsg ].szIcon ) );
+			}
 		}
 
 		m_DeathNotices[iMsg].iWeaponID = event->GetInt( "weaponid" );
@@ -650,14 +636,6 @@ void CHudBaseDeathNotice::FireGameEvent( IGameEvent *event )
 	}
 	else if ( FStrEq( "teamplay_flag_event", pszEventName ) )
 	{
-		// don't handle any flag events for death notices while in player destruction mode 
-		if ( CTFPlayerDestructionLogic::GetRobotDestructionLogic() && CTFPlayerDestructionLogic::GetRobotDestructionLogic()->GetType() == CTFPlayerDestructionLogic::TYPE_PLAYER_DESTRUCTION )
-		{
-			// don't put anything up
-			m_DeathNotices.Remove( iMsg );
-			return;
-		}
-
 		const char *pszMsgKey = NULL;
 		int iEventType = event->GetInt( "eventtype" );
 

@@ -19,8 +19,6 @@
 
 #include "tf_weapon_wrench.h"
 
-#include "passtime_convars.h"
-
 // Server specific.
 #if !defined( CLIENT_DLL )
 #include "tf_player.h"
@@ -4918,7 +4916,7 @@ void CTFWeaponBase::ApplyOnHitAttributes( CBaseEntity *pVictimBaseEntity, CTFPla
 				if ( !pTFPlayer->IsBot() )
 					continue;
 
-				if ( pVictim->m_Shared.InCond( TF_COND_PHASE ) || pVictim->m_Shared.InCond( TF_COND_PASSTIME_INTERCEPTION ) )
+				if ( pVictim->m_Shared.InCond( TF_COND_PHASE ) )
 					continue;
 
 				if ( pVictim->m_Shared.IsInvulnerable() )
