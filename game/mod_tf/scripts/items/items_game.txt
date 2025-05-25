@@ -2975,9 +2975,17 @@
 			"static_attrs"
 			{
 				"min_viewmodel_offset"					"10 -3 -10"
-				"airblast cost increased"				"2.5"
 				"mod flamethrower back crit"			"1"
 				"crit mod disabled hidden"				"0"
+				"airblast disabled"				"1"
+			}
+			"attributes"
+			{
+							"damage bonus"
+				{
+					"attribute_class"	"mult_dmg"
+					"value"	"1.15"
+				}
 			}
 			"visuals"
 			{
@@ -8499,11 +8507,11 @@
 					"attribute_class"	"set_weapon_mode"
 					"value"	"1"
 				}
-				"max health additive penalty"
+                                "max health additive penalty"
 				{
 					"attribute_class"	"add_maxhealth"
 					"value" "-15"
-				}
+		                }
 				"special taunt"
 				{
 					"attribute_class"	"special_taunt"
