@@ -150,3 +150,17 @@ $Project "vvis_launcher"
 	"utils\vvis_launcher\vvis_launcher.vpc" [$WINDOWS]
 }
 
+$Project "enginedetours" // VERY IMPORTANT DO NOT MOVE enginedetours & friends UP because VPC pollutes the environment with each project
+{
+	"thirdparty\enginedetours\enginedetours.vpc"
+}
+
+$Project "safetyhook"
+{
+	"thirdparty\safetyhook\safetyhook.vpc"
+}
+
+$Project "zydis"
+{
+	"thirdparty\zydis\zydis.vpc"
+}

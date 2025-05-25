@@ -32,6 +32,13 @@ $Group "shaders"
 	//"game_shader_generic_std"
 }
 
+$Group "enginedetoursgroup"
+{
+	"enginedetours"
+	"safetyhook"
+	"zydis"
+}
+
 $Group "everything"
 {
 	"captioncompiler"

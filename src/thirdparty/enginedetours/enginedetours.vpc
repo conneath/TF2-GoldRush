@@ -1,0 +1,52 @@
+//-----------------------------------------------------------------------------
+// Source Engine Detours
+//-----------------------------------------------------------------------------
+
+$Macro SRCDIR		"../.."
+$Macro OUTLIBDIR	"$LIBCOMMON"
+
+$include "$SRCDIR\vpc_scripts\source_lib_base.vpc"
+
+$Configuration
+{
+	$General
+	{
+		$AdditionalProjectDependencies "safetyhook"
+	}
+
+	$Compiler
+	{
+		$NinjaExtraCXXFlags "$BASE -fpermissive -std=c++20" // screw your c++11
+		$AdditionalIncludeDirectories		"$BASE,.\public,.\private,..\safetyhook,$SRCDIR\public"
+	}
+}
+
+$Project "enginedetours"
+{
+	$Folder	"Header Files"
+	{
+		$File "public\clientdetours.hpp"
+
+		$File "public\enginedetours_client.hpp"
+		$File "private\client\fontshadow.hpp"
+
+		$File "public\enginedetours_server.hpp"
+	}
+
+	$Folder	"Source Files"
+	{
+		$File "private\enginedetours.cpp"
+
+		$File "private\client\enginedetours_client.cpp"
+		$File "private\client\fontshadow.cpp"
+
+		$File "private\server\enginedetours_server.cpp"
+	}
+
+    $Folder "Link Libraries"
+	{
+		$Lib safetyhook
+		//$Lib tier0 // for printing to console
+	}
+}
+
