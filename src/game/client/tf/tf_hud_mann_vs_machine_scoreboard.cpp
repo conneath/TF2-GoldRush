@@ -15,7 +15,6 @@ using namespace vgui;
 
 extern ConVar tf_mvm_respec_credit_goal;
 extern ConVar tf_mvm_respec_limit;
-extern ConVar tf_scoreboard_alt_class_icons;
 
 DECLARE_BUILD_FACTORY( CMvMScoreboardEnemyInfo );
 
@@ -321,11 +320,11 @@ void CTFHudMannVsMachineScoreboard::UpdatePlayerList ()
 			{
 				if ( bAlive )
 				{
-					pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass] : m_iImageClass[iClass] );
+					//pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass] : m_iImageClass[iClass] );
 				}
 				else
 				{
-					pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass + 9] : m_iImageClass[iClass + 9] ); // +9 is to jump ahead to the darker dead icons
+					//pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass + 9] : m_iImageClass[iClass + 9] ); // +9 is to jump ahead to the darker dead icons
 				}
 			}
 			else

@@ -47,8 +47,6 @@ extern ISoundEmitterSystemBase *soundemitterbase;
 #define MS_STATE_TIME_BETWEEN_MEDALS					0.1f
 #define MS_STATE_TIME_BETWEEN_MEDALS_CATEGORIES			0.1f
 
-extern ConVar tf_scoreboard_alt_class_icons;
-
 DECLARE_BUILD_FACTORY( TFSectionedListPanel );
 
 DECLARE_HUDELEMENT( CTFMatchSummary );
@@ -659,14 +657,7 @@ void CTFMatchSummary::UpdatePlayerList()
 			pKeyValues->SetInt( "score", g_TF_PR->GetTotalScore( playerIndex ) );
 
 			int iClass = g_TF_PR->GetPlayerClass( playerIndex );
-			if ( iClass >= TF_FIRST_NORMAL_CLASS && iClass <= TF_LAST_NORMAL_CLASS )
-			{
-				pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass] : m_iImageClass[iClass] );
-			}
-			else
-			{
-				pKeyValues->SetInt( "class", 0 );
-			}
+			pKeyValues->SetInt( "class", 0 );
 
 			pKeyValues->SetInt( "kills", g_TF_PR->GetPlayerScore( playerIndex ) );
 			pKeyValues->SetInt( "damage", g_TF_PR->GetDamage( playerIndex ) );

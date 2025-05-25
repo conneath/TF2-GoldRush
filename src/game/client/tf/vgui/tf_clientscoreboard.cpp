@@ -75,45 +75,12 @@ void cc_scoreboard_convar_changed( IConVar *pConVar, const char *pOldString, flo
 		pScoreboard->Reset();
 	}
 }
-ConVar tf_scoreboard_ping_as_text( "tf_scoreboard_ping_as_text", "0", FCVAR_ARCHIVE, "Show ping values as text in the scoreboard.", cc_scoreboard_convar_changed );
-ConVar tf_scoreboard_alt_class_icons( "tf_scoreboard_alt_class_icons", "0", FCVAR_ARCHIVE, "Show alternate class icons in the scoreboard." );
 
 extern bool IsInCommentaryMode( void );
 extern bool DuelMiniGame_GetStats( C_TFPlayer **ppPlayer, uint32 &unMyScore, uint32 &unOpponentScore );
 extern void AddSubKeyNamed( KeyValues *pKeys, const char *pszName );
 
 extern ConVar mp_tournament;
-
-//......................................................
-enum
-{
-	PING_LOW,
-	PING_MED,
-	PING_HIGH,
-	PING_VERY_HIGH,
-	PING_BOT_RED,
-	PING_BOT_BLUE,
-
-	PING_MAX_TYPES
-};
-static const char *pszPingIcons[SCOREBOARD_PING_ICONS] = {
-	"../hud/scoreboard_ping_low",
-	"../hud/scoreboard_ping_med",
-	"../hud/scoreboard_ping_high",
-	"../hud/scoreboard_ping_very_high",
-	"../hud/scoreboard_ping_bot_red",
-	"../hud/scoreboard_ping_bot_blue",
-};
-static const char *pszPingIconsDead[SCOREBOARD_PING_ICONS] = {
-	"../hud/scoreboard_ping_low_d",
-	"../hud/scoreboard_ping_med_d",
-	"../hud/scoreboard_ping_high_d",
-	"../hud/scoreboard_ping_very_high_d",
-	"../hud/scoreboard_ping_bot_red_d",
-	"../hud/scoreboard_ping_bot_blue_d",
-};
-COMPILE_TIME_ASSERT( SCOREBOARD_PING_ICONS == PING_MAX_TYPES );
-//......................................................
 
 static const char *pszDominationIcons[SCOREBOARD_DOMINATION_ICONS] = {
 	"",
@@ -196,6 +163,7 @@ CTFClientScoreBoardDialog::CTFClientScoreBoardDialog( IViewPort *pViewPort ) : C
 	m_iImageStreak = 0;
 	m_iImageStreakDead = 0;
 	m_iTextureCamera = -1;
+	m_iImageDead = 0;
 
 	m_bIsPVEMode = false;
 //	m_bDisplayLevel = false;
@@ -264,21 +232,12 @@ void CTFClientScoreBoardDialog::ApplySchemeSettings( vgui::IScheme *pScheme )
 		m_iImageNemesisDead = m_pImageList->AddImage( scheme()->GetImage( "../hud/leaderboard_nemesis_d", true ) );
 		m_iImageStreak = m_pImageList->AddImage( scheme()->GetImage( "../hud/scoreboard_streak", true ) );
 		m_iImageStreakDead = m_pImageList->AddImage( scheme()->GetImage( "../hud/scoreboard_streak_d", true ) );
+		m_iImageDead = m_pImageList->AddImage(scheme()->GetImage("../hud/leaderboard_dead", true));
 
 		for(int i = 1 ; i < SCOREBOARD_DOMINATION_ICONS ; i++)
 		{
 			m_iImageDom[i] = m_pImageList->AddImage( scheme()->GetImage( pszDominationIcons[i], true ) );
 			m_iImageDomDead[i] = m_pImageList->AddImage( scheme()->GetImage( pszDominationIconsDead[i], true ) );
-		}
-		for( int i = 1 ; i < SCOREBOARD_CLASS_ICONS ; i++ )
-		{
-			m_iImageClass[i] = m_pImageList->AddImage( scheme()->GetImage( g_pszClassIcons[i], true ) );
-			m_iImageClassAlt[i] = m_pImageList->AddImage( scheme()->GetImage( g_pszClassIconsAlt[i], true ) );
-		}
-		for ( int i = 0; i < SCOREBOARD_PING_ICONS; i++ )
-		{
-			m_iImagePing[i] = m_pImageList->AddImage( scheme()->GetImage( pszPingIcons[i], true ) );
-			m_iImagePingDead[i] = m_pImageList->AddImage( scheme()->GetImage( pszPingIconsDead[i], true ) );
 		}
 
 		// resize the images to our resolution
@@ -826,34 +785,23 @@ void CTFClientScoreBoardDialog::InitPlayerList( SectionedListPanel *pPlayerList 
 	pPlayerList->SetBgColor( Color( 0, 0, 0, 0 ) );
 	pPlayerList->SetBorder( NULL );
 
-	pPlayerList->AddColumnToSection( 0, "medal", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_CENTER, m_iMedalColumnWidth );
+	//pPlayerList->AddColumnToSection( 0, "medal", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_CENTER, m_iMedalColumnWidth );
 
 	// Avatars are always displayed at 32x32 regardless of resolution
 	if ( ShowAvatars() )
 	{
 		pPlayerList->AddColumnToSection( 0, "avatar", "", SectionedListPanel::COLUMN_IMAGE, m_iAvatarWidth );
-		pPlayerList->AddColumnToSection( 0, "spacer", "", 0, m_iSpacerWidth );
 	}
 	
 	// the player avatar is always a fixed size, so as we change resolutions we need to vary the size of the name column to adjust the total width of all the columns
-	m_nExtraSpace = pPlayerList->GetWide() - m_iMedalColumnWidth - m_iAvatarWidth - m_iSpacerWidth - m_iNameWidth - m_iKillstreakWidth - m_iKillstreakImageWidth - m_iNemesisWidth - m_iNemesisWidth - m_iScoreWidth - m_iClassWidth - m_iPingWidth - m_iSpacerWidth - ( 2 * SectionedListPanel::COLUMN_DATA_INDENT ); // the SectionedListPanel will indent the columns on either end by SectionedListPanel::COLUMN_DATA_INDENT 
+	m_nExtraSpace = pPlayerList->GetWide() - m_iAvatarWidth - m_iSpacerWidth - m_iNameWidth - m_iKillstreakWidth - m_iKillstreakImageWidth - m_iNemesisWidth - m_iNemesisWidth - m_iScoreWidth - m_iClassWidth - m_iPingWidth - m_iSpacerWidth - m_iDeathWidth - ( 2 * SectionedListPanel::COLUMN_DATA_INDENT ); // the SectionedListPanel will indent the columns on either end by SectionedListPanel::COLUMN_DATA_INDENT 
 
-	pPlayerList->AddColumnToSection( 0, "name", "#TF_Scoreboard_Name", 0, m_iNameWidth + m_nExtraSpace );
-	pPlayerList->AddColumnToSection( 0, "killstreak", "", SectionedListPanel::COLUMN_RIGHT, m_iKillstreakWidth );
-	pPlayerList->AddColumnToSection( 0, "killstreak_image", "", SectionedListPanel::COLUMN_IMAGE, m_iKillstreakImageWidth );
-	pPlayerList->AddColumnToSection( 0, "dominating", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_CENTER, m_iNemesisWidth );
-	pPlayerList->AddColumnToSection( 0, "nemesis", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_CENTER, m_iNemesisWidth );
-	pPlayerList->AddColumnToSection( 0, "score", "#TF_Scoreboard_Score", SectionedListPanel::COLUMN_RIGHT, m_iScoreWidth );
-	pPlayerList->AddColumnToSection( 0, "class", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_RIGHT, m_iClassWidth );
-
-	if ( tf_scoreboard_ping_as_text.GetBool() )
-	{
-		pPlayerList->AddColumnToSection( 0, "ping", "#TF_Scoreboard_Ping", SectionedListPanel::COLUMN_RIGHT, m_iPingWidth );
-	}
-	else
-	{
-		pPlayerList->AddColumnToSection( 0, "ping", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_RIGHT, m_iPingWidth );
-	}
+	pPlayerList->AddColumnToSection(0, "name", "#TF_Scoreboard_Name", 0, m_iNameWidth);
+	pPlayerList->AddColumnToSection(0, "status", "", SectionedListPanel::COLUMN_IMAGE | SectionedListPanel::COLUMN_CENTER, m_iStatusWidth);
+	pPlayerList->AddColumnToSection(0, "nemesis", "", SectionedListPanel::COLUMN_IMAGE, m_iNemesisWidth);
+	pPlayerList->AddColumnToSection(0, "class", "", 0, m_iClassWidth);
+	pPlayerList->AddColumnToSection(0, "score", "#TF_Scoreboard_Score", SectionedListPanel::COLUMN_RIGHT, m_iScoreWidth);
+	pPlayerList->AddColumnToSection(0, "ping", "#TF_Scoreboard_Ping", SectionedListPanel::COLUMN_RIGHT, m_iPingWidth);
 }
 
 //-----------------------------------------------------------------------------
@@ -884,8 +832,6 @@ void CTFClientScoreBoardDialog::Update()
 	MoveToCenterOfScreen();
 	UpdateServerTimeLeft();
 	AdjustForVisibleScrollbar();
-	UpdateBadgePanels( m_pRedBadgePanels, m_pPlayerListRed );
-	UpdateBadgePanels( m_pBlueBadgePanels, m_pPlayerListBlue );
 
 	float flNextUpdate = 1.0f;
 	if ( UseMouseMode() )
@@ -914,6 +860,7 @@ void CTFClientScoreBoardDialog::UpdateTeamInfo()
 	// update the team sections in the scoreboard
 	for ( int teamIndex = TF_TEAM_RED; teamIndex <= TF_TEAM_BLUE; teamIndex++ )
 	{
+
 		C_TFTeam *team = GetGlobalTFTeam( teamIndex );
 		if ( team )
 		{
@@ -963,18 +910,6 @@ void CTFClientScoreBoardDialog::UpdateTeamInfo()
 		}
 	}
 
-	bool bMvM = TFGameRules() && TFGameRules()->IsMannVsMachineMode();
-	bool bTournament = mp_tournament.GetBool() && !bMvM;
-	if ( m_pRedTeamName->IsVisible() != bTournament )
-	{
-		m_pRedTeamName->SetVisible( bTournament );
-	}
-
-	if ( m_pBlueTeamName->IsVisible() != bTournament )
-	{
-		m_pBlueTeamName->SetVisible( bTournament );
-	}
-
 	bool bShowAvatars = g_TF_PR && g_TF_PR->HasPremadeParties();
 	if ( bShowAvatars )
 	{
@@ -986,11 +921,11 @@ void CTFClientScoreBoardDialog::UpdateTeamInfo()
 
 	m_pRedLeaderAvatarImage->SetVisible( bShowAvatars );
 	m_pRedLeaderAvatarBG->SetVisible( bShowAvatars );
-	m_pRedTeamImage->SetVisible( !bShowAvatars && !bMvM );
+	m_pRedTeamImage->SetVisible( !bShowAvatars );
 
 	m_pBlueLeaderAvatarImage->SetVisible( bShowAvatars );
 	m_pBlueLeaderAvatarBG->SetVisible( bShowAvatars );
-	m_pBlueTeamImage->SetVisible( !bShowAvatars && !bMvM );
+	m_pBlueTeamImage->SetVisible( !bShowAvatars );
 }
 
 //-----------------------------------------------------------------------------
@@ -1024,149 +959,6 @@ void CTFClientScoreBoardDialog::AdjustForVisibleScrollbar( void )
 		m_bBlueScrollBarVisible = m_pPlayerListBlue->GetScrollBar()->IsVisible();
 		int iScrollBarWidth = m_bBlueScrollBarVisible ? m_pPlayerListBlue->GetScrollBar()->GetWide() : 0;
 		m_pPlayerListBlue->SetColumnWidthBySection( 0, "name", m_iNameWidth + m_nExtraSpace - iScrollBarWidth );
-	}
-}
-
-//-----------------------------------------------------------------------------
-// Purpose: 
-//-----------------------------------------------------------------------------
-void CTFClientScoreBoardDialog::UpdateBadgePanels( CUtlVector<CTFBadgePanel*> &pBadgePanels, vgui::SectionedListPanel *pPlayerList )
-{
-	int iNumPanels = 0;
-
-	if ( tf_show_all_scoreboard_elements.GetBool() )
-	{
-		int parentTall = pPlayerList->GetTall();
-		CTFBadgePanel *pPanel = NULL;
-
-		for ( int i = 0; i < pPlayerList->GetItemCount(); i++ )
-		{
-			KeyValues* pKeyValues = pPlayerList->GetItemData( i );
-			if ( !pKeyValues )
-				continue;
-
-			//int iPlayerIndex = pKeyValues->GetInt( "playerIndex" );
-			{
-				if ( iNumPanels >= pBadgePanels.Count() )
-				{
-					pPanel = new CTFBadgePanel( this, "BadgePanel" );
-					pPanel->MakeReadyForUse();
-					pPanel->SetVisible( true );
-					pPanel->SetZPos( 9999 );
-					pBadgePanels.AddToTail( pPanel );
-				}
-				else
-				{
-					pPanel = pBadgePanels[iNumPanels];
-				}
-
-				int x, y, wide, tall;
-				pPlayerList->GetMaxCellBounds( i, 0, x, y, wide, tall );
-
-				wide = m_iMedalWidth;
-
-				if ( y + tall > parentTall )
-					continue;
-
-				if ( !pPanel->IsVisible() )
-				{
-					pPanel->SetVisible( true );
-				}
-
-				int xParent, yParent;
-				pPlayerList->GetPos( xParent, yParent );
-
-				int nPanelXPos, nPanelYPos, nPanelWide, nPanelTall;
-				pPanel->GetBounds( nPanelXPos, nPanelYPos, nPanelWide, nPanelTall );
-
-				if ( ( nPanelXPos != xParent + x )
-					|| ( nPanelYPos != yParent + y )
-					|| ( nPanelWide != wide )
-					|| ( nPanelTall != tall ) )
-				{
-					pPanel->SetBounds( xParent + x, yParent + y, wide, tall );
-					pPanel->InvalidateLayout( true, true );
-				}
-
-				pPanel->SetupDummyBadge( 100, false );
-				iNumPanels++;
-			}
-		}
-	}
-	else
-	{
-		const IMatchGroupDescription *pMatchDesc = TFGameRules() ? GetMatchGroupDescription( TFGameRules()->GetCurrentMatchGroup() ) : NULL;
-		if ( pMatchDesc && pPlayerList )
-		{
-			if ( TFGameRules()->IsMatchTypeCasual() )
-			{
-				int parentTall = pPlayerList->GetTall();
-				CTFBadgePanel *pPanel = NULL;
-
-				for ( int i = 0; i < pPlayerList->GetItemCount(); i++ )
-				{
-					KeyValues *pKeyValues = pPlayerList->GetItemData( i );
-					if ( !pKeyValues )
-						continue;
-
-					int iPlayerIndex = pKeyValues->GetInt( "playerIndex" );
-					const CSteamID steamID = GetSteamIDForPlayerIndex( iPlayerIndex );
-					if ( steamID.IsValid() )
-					{
-						if ( iNumPanels >= pBadgePanels.Count() )
-						{
-							pPanel = new CTFBadgePanel( this, "BadgePanel" );
-							pPanel->MakeReadyForUse();
-							pPanel->SetVisible( true );
-							pPanel->SetZPos( 9999 );
-							pBadgePanels.AddToTail( pPanel );
-						}
-						else
-						{
-							pPanel = pBadgePanels[iNumPanels];
-						}
-
-						int x, y, wide, tall;
-						pPlayerList->GetMaxCellBounds( i, 0, x, y, wide, tall );
-
-						if ( y + tall > parentTall )
-							continue;
-
-						if ( !pPanel->IsVisible() )
-						{
-							pPanel->SetVisible( true );
-						}
-
-						int xParent, yParent;
-						pPlayerList->GetPos( xParent, yParent );
-
-						int nPanelXPos, nPanelYPos, nPanelWide, nPanelTall;
-						pPanel->GetBounds( nPanelXPos, nPanelYPos, nPanelWide, nPanelTall );
-
-						if ( ( nPanelXPos != xParent + x )
-							|| ( nPanelYPos != yParent + y )
-							|| ( nPanelWide != wide )
-							|| ( nPanelTall != tall ) )
-						{
-							pPanel->SetBounds( xParent + x, yParent + y, wide, tall );
-							pPanel->InvalidateLayout( true, true );
-						}
-
-						pPanel->SetupBadge( pMatchDesc, steamID );
-						iNumPanels++;
-					}
-				}
-			}
-		}
-	}
-
-	// hide any unused images
-	for ( int i = iNumPanels; i < pBadgePanels.Count(); i++ )
-	{
-		if ( pBadgePanels[i]->IsVisible() )
-		{
-			pBadgePanels[i]->SetVisible( false );
-		}
 	}
 }
 
@@ -1252,7 +1044,7 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 
 				int itemID = pPlayerList->AddItem( 0, pKV );
 				pPlayerList->SetItemFgColor( itemID, ( eConnectionState == MM_DISCONNECTED ) ? Color( 208, 147, 7, 255 ) : Color( 76, 107, 34, 255 ) );
-				pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );
+				/*pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );*/
 				pPlayerList->SetItemFont( itemID, m_hScoreFontSmallest );
 
 				pKV->deleteThis();
@@ -1322,18 +1114,12 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 				}
 			}
 
+			pKeyValues->SetInt("status", g_TF_PR->IsAlive(playerIndex) ? 0 : m_iImageDead);
+
 			// check for bots first, so malicious server operators can't fake a ping and stuff their server with bots that look like players
 			if ( g_PR->IsFakePlayer( playerIndex ) )
 			{
-				if ( tf_scoreboard_ping_as_text.GetBool() )
-				{
-					pKeyValues->SetString( "ping", "#TF_Scoreboard_Bot" );
-				}
-				else
-				{
-					int iIndex = ( nTeam == TF_TEAM_RED ) ? PING_BOT_RED : PING_BOT_BLUE;
-					pKeyValues->SetInt( "ping", bAlive ? m_iImagePing[iIndex] : m_iImagePingDead[iIndex] );
-				}
+				pKeyValues->SetString( "ping", "#TF_Scoreboard_Bot" );
 			}
 			else
 			{
@@ -1341,40 +1127,11 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 
  				if ( nPing < 1 )
  				{
-					if ( tf_scoreboard_ping_as_text.GetBool() )
-					{
-						pKeyValues->SetString( "ping", "" );
-					}
-					else
-					{
-						pKeyValues->SetInt( "ping", 0 );
-					}
+					pKeyValues->SetInt( "ping", 0 );
  				}
  				else
 				{
-					if ( tf_scoreboard_ping_as_text.GetBool() )
-					{
-						pKeyValues->SetInt( "ping", nPing );
-					}
-					else
-					{
-						int iIndex = PING_VERY_HIGH;
-
-						if ( nPing < 125 )
-						{
-							iIndex = PING_LOW;
-						}
-						else if ( nPing < 200 )
-						{
-							iIndex = PING_MED;
-						}
-						else if ( nPing < 275 )
-						{
-							iIndex = PING_HIGH;
-						}
-							
-						pKeyValues->SetInt( "ping", bAlive ? m_iImagePing[iIndex] : m_iImagePingDead[iIndex] );
-					}
+					pKeyValues->SetInt( "ping", nPing );
 				}
 			}
 
@@ -1419,11 +1176,11 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 					{
 						if ( bAlive )
 						{
-							pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass] : m_iImageClass[iClass] );
+							pKeyValues->SetString("class", g_aPlayerClassNames[iClass]);
 						}
 						else
 						{
-							pKeyValues->SetInt( "class", tf_scoreboard_alt_class_icons.GetBool() ? m_iImageClassAlt[iClass + 9] : m_iImageClass[iClass + 9] ); // +9 is to jump ahead to the darker dead icons
+							pKeyValues->SetString("class", "");
 						}
 					}
 					else
@@ -1494,7 +1251,7 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 			}
 
 			pPlayerList->SetItemFgColor( itemID, clr );
-			pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );
+			/*pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );*/
 			pPlayerList->SetItemFont( itemID, m_hScoreFontDefault );
 
 			if ( iSelectedPlayerIndex == playerIndex )
@@ -1538,7 +1295,7 @@ void CTFClientScoreBoardDialog::UpdatePlayerList()
 
 						int itemID = pPlayerList->AddItem( 0, pKV );
 						pPlayerList->SetItemFgColor( itemID, Color( 120, 120, 120, 255 ) );
-						pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );
+						/*pPlayerList->SetItemBgColor( itemID, Color( 0, 0, 0, 80 ) );*/
 						pPlayerList->SetItemFont( itemID, m_hScoreFontSmallest );
 
 						pKV->deleteThis();
@@ -1791,91 +1548,21 @@ void CTFClientScoreBoardDialog::UpdatePlayerDetails()
 			m_pLocalPlayerDuelStatsPanel->SetVisible( false );
 		}
 
-		Color cGreen = Color( 0, 255, 0, 255 );
-		Color cWhite = Color( 255, 255, 255, 255 );
-
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "kills", g_TF_PR->GetPlayerScore( playerIndex ) );
-		if ( m_pKillsLabel )
-		{
-			m_pKillsLabel->SetFgColor( g_TF_PR->GetPlayerScore( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "deaths", g_TF_PR->GetDeaths( playerIndex ) );
-		if ( m_pDeathsLabel )
-		{
-			m_pDeathsLabel->SetFgColor( g_TF_PR->GetDeaths( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "assists", pSelectedPlayer->m_Shared.GetKillAssists( playerIndex ) );
-		if ( m_pAssistLabel )
-		{
-			m_pAssistLabel->SetFgColor( pSelectedPlayer->m_Shared.GetKillAssists( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "destruction", pSelectedPlayer->m_Shared.GetBuildingsDestroyed( playerIndex ) );
-		if ( m_pDestructionLabel )
-		{
-			m_pDestructionLabel->SetFgColor( pSelectedPlayer->m_Shared.GetBuildingsDestroyed( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "captures", pSelectedPlayer->m_Shared.GetCaptures( playerIndex ) );
-		if ( m_pCapturesLabel )
-		{
-			m_pCapturesLabel->SetFgColor( pSelectedPlayer->m_Shared.GetCaptures( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "defenses", pSelectedPlayer->m_Shared.GetDefenses( playerIndex ) );
-		if ( m_pDefensesLabel )
-		{
-			m_pDefensesLabel->SetFgColor( pSelectedPlayer->m_Shared.GetDefenses( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "dominations", pSelectedPlayer->m_Shared.GetDominations( playerIndex ) );
-		if ( m_pDominationsLabel )
-		{
-			m_pDominationsLabel->SetFgColor( pSelectedPlayer->m_Shared.GetDominations( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "revenge", pSelectedPlayer->m_Shared.GetRevenge( playerIndex ) );
-		if ( m_pRevengeLabel )
-		{
-			m_pRevengeLabel->SetFgColor( pSelectedPlayer->m_Shared.GetRevenge( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "healing", pSelectedPlayer->m_Shared.GetHealPoints( playerIndex ) );
-		if ( m_pHealingLabel )
-		{
-			m_pHealingLabel->SetFgColor( pSelectedPlayer->m_Shared.GetHealPoints( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "invulns", pSelectedPlayer->m_Shared.GetInvulns( playerIndex ) );
-		if ( m_pInvulnsLabel )
-		{
-			m_pInvulnsLabel->SetFgColor( pSelectedPlayer->m_Shared.GetInvulns( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "teleports", pSelectedPlayer->m_Shared.GetTeleports( playerIndex ) );
-		if ( m_pTeleportsLabel )
-		{
-			m_pTeleportsLabel->SetFgColor( pSelectedPlayer->m_Shared.GetTeleports( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "headshots", pSelectedPlayer->m_Shared.GetHeadshots( playerIndex ) );
-		if ( m_pHeadshotsLabel )
-		{
-			m_pHeadshotsLabel->SetFgColor( pSelectedPlayer->m_Shared.GetHeadshots( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "backstabs", pSelectedPlayer->m_Shared.GetBackstabs( playerIndex ) );
-		if ( m_pBackstabsLabel )
-		{
-			m_pBackstabsLabel->SetFgColor( pSelectedPlayer->m_Shared.GetBackstabs( playerIndex ) ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "bonus", pSelectedPlayer->m_Shared.GetBonusPoints( playerIndex ) );
-		if ( m_pBonusLabel )
-		{
-			m_pBonusLabel->SetFgColor( pSelectedPlayer->m_Shared.GetBonusPoints( playerIndex ) ? cGreen : cWhite );
-		}
-
-		int nSupport = TFGameRules() ? TFGameRules()->CalcPlayerSupportScore( NULL, playerIndex ) : 0;
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "support", nSupport );
-		if ( m_pSupportLabel )
-		{
-			m_pSupportLabel->SetFgColor( nSupport ? cGreen : cWhite );
-		}
-		m_pLocalPlayerStatsPanel->SetDialogVariable( "damage", g_TF_PR->GetDamage( playerIndex ) );
-		if ( m_pDamageLabel )
-		{
-			m_pDamageLabel->SetFgColor( g_TF_PR->GetDamage( playerIndex ) ? cGreen : cWhite );
-		}
+		SetDialogVariable("kills", g_TF_PR->GetPlayerScore(playerIndex));
+		SetDialogVariable("deaths", g_TF_PR->GetDeaths(playerIndex));
+		SetDialogVariable("assists", pSelectedPlayer->m_Shared.GetKillAssists(playerIndex));
+		SetDialogVariable("destruction", pSelectedPlayer->m_Shared.GetBuildingsDestroyed(playerIndex));
+		SetDialogVariable("captures", pSelectedPlayer->m_Shared.GetCaptures(playerIndex));
+		SetDialogVariable("defenses", pSelectedPlayer->m_Shared.GetDefenses(playerIndex));
+		SetDialogVariable("dominations", pSelectedPlayer->m_Shared.GetDominations(playerIndex));
+		SetDialogVariable("revenge", pSelectedPlayer->m_Shared.GetRevenge(playerIndex));
+		SetDialogVariable("healing", pSelectedPlayer->m_Shared.GetHealPoints(playerIndex));
+		SetDialogVariable("invulns", pSelectedPlayer->m_Shared.GetInvulns(playerIndex));
+		SetDialogVariable("teleports", pSelectedPlayer->m_Shared.GetTeleports(playerIndex));
+		SetDialogVariable("headshots", pSelectedPlayer->m_Shared.GetHeadshots(playerIndex));
+		SetDialogVariable("backstabs", pSelectedPlayer->m_Shared.GetBackstabs(playerIndex));
+		SetDialogVariable("playername", g_TF_PR->GetPlayerName(playerIndex));
+		SetDialogVariable("playerscore", GetPointsString(g_TF_PR->GetTotalScore(playerIndex)));
 	}		
 
 	SetDialogVariable( "playername", g_TF_PR->GetPlayerName( playerIndex ) );
@@ -2061,7 +1748,7 @@ void CTFClientScoreBoardDialog::ClearPlayerDetails()
 
 	SetDialogVariable( "playername", "" );
 
-//	SetDialogVariable( "playerscore", "" );
+	SetDialogVariable( "playerscore", "" );
 
 	
 }
